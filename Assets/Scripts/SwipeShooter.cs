@@ -4,20 +4,20 @@ using UnityEngine;
 /// <summary>
 /// Detecta el swipe (touch o mouse, para poder probar en el editor),
 /// muestra en pantalla el trazo dibujado, y dispara la pelota usando:
-/// - La direccion recta entre inicio y fin del swipe -> apunta el tiro
-///   (arriba/abajo = altura, izquierda/derecha = apertura del tiro).
-/// - Que tan curvado esta el trazo respecto a esa linea recta -> efecto
+/// - La direccion real hacia el arco (aimTarget) como base del tiro -> el
+///   swipe solo desvia alrededor de esa linea (no depende de ejes fijos
+///   del mundo ni de como este rotada la camara).
+/// - Que tan curvado esta el trazo respecto a la linea recta del swipe -> efecto
 ///   de curva (banana) durante el vuelo, via BallCurveEffect.
 /// - El multiplicador de potencia de la barra de jueguitos (lo fija
 ///   GameFlowManager al pasar a esta fase).
 ///
-/// Nota de version: la direccion del tiro ahora se normaliza antes de
-/// aplicar los factores de fuerza. Antes, el componente horizontal (x) y
-/// el de profundidad (z) se escalaban con el mismo forceMultiplier pero el
-/// x crudo del swipe es siempre mucho mas chico que la magnitud total, asi
-/// que el tiro se sentia "centrado" sin importar cuanto se swipeaba al
-/// costado. Al normalizar la direccion, el angulo del swipe define hacia
-/// donde apunta y la magnitud define solo la potencia total.
+/// Nota de version: antes la direccion se armaba con ejes fijos del mundo
+/// (X/Y/Z), lo que hacia que el tiro se fuera para cualquier lado si la
+/// camara cambiaba de angulo o el arco no estaba alineado con el eje Z.
+/// Ahora se calcula "shotForward" como la direccion real de la pelota al
+/// arco, y el swipe (izq/der = shotRight, arriba/abajo = altura) se aplica
+/// relativo a esa linea. El resultado es estable sin importar la camara.
 /// </summary>
 public class SwipeShooter : MonoBehaviour
 {
@@ -27,6 +27,9 @@ public class SwipeShooter : MonoBehaviour
 
     [Tooltip("Dibuja el trazo del swipe en pantalla. Si esta vacio se busca en este mismo GameObject")]
     [SerializeField] private SwipeTrailRenderer trailRenderer;
+
+    [Tooltip("Punto al que apunta el tiro por defecto (el arco/centro). El swipe desvia alrededor de esta direccion. Si esta vacio, usa Vector3.forward como respaldo.")]
+    [SerializeField] private Transform aimTarget;
 
     [Header("Configuracion del swipe")]
     [Tooltip("Distancia minima en pixeles para que cuente como swipe valido")]
@@ -234,18 +237,33 @@ public class SwipeShooter : MonoBehaviour
             return;
         }
 
-        // Normalizamos la direccion del swipe: el angulo define hacia donde
-        // apunta el tiro, la magnitud define solo cuanta potencia total tiene.
-        // Asi el aim izquierda/derecha responde de verdad al angulo del gesto
-        // en vez de perderse frente a la componente de profundidad.
+        // Base del tiro: la direccion real hacia el arco (en el plano
+        // horizontal), no un eje fijo del mundo. Asi el resultado no depende
+        // de como este rotada la camara ni de que el arco este alineado con
+        // el eje Z. El swipe solo desvia alrededor de esta linea:
+        // - dir2D.x (izq/der del swipe) -> desviacion lateral respecto al arco
+        // - dir2D.y (arriba/abajo) -> altura
+        // - magnitud -> potencia total
+        Vector3 toTarget = aimTarget != null
+            ? (aimTarget.position - ball.position)
+            : Vector3.forward;
+        toTarget.y = 0f; // la base de apuntado es horizontal, la altura la pone el swipe
+
+        if (toTarget.sqrMagnitude < 0.0001f)
+        {
+            toTarget = Vector3.forward;
+        }
+
+        Vector3 shotForward = toTarget.normalized;
+        Vector3 shotRight = Vector3.Cross(Vector3.up, shotForward).normalized;
+
         Vector2 dir2D = straightVector.normalized;
         float power = straightVector.magnitude * forceMultiplier * powerMultiplier;
 
-        Vector3 shootDirection = new Vector3(
-            dir2D.x * power * horizontalFactor,
-            Mathf.Max(dir2D.y, 0f) * power * verticalFactor,
-            power * forwardFactor
-        );
+        Vector3 shootDirection =
+            shotForward * (power * forwardFactor) +
+            shotRight * (dir2D.x * power * horizontalFactor) +
+            Vector3.up * (Mathf.Max(dir2D.y, 0f) * power * verticalFactor);
 
         ball.linearVelocity = Vector3.zero; // reset por si venia con velocidad previa
         ball.AddForce(shootDirection, ForceMode.Impulse);
@@ -253,7 +271,10 @@ public class SwipeShooter : MonoBehaviour
         BallCurveEffect curveEffect = ball.GetComponent<BallCurveEffect>();
         if (curveEffect != null)
         {
-            curveEffect.ApplyCurve(curveAmount, shootDirection);
+            // Pasamos shotForward (la linea base al arco) y no shootDirection
+            // completo, para que el eje de la curva sea siempre estable
+            // respecto al arco, sin importar cuanto desvio el swipe.
+            curveEffect.ApplyCurve(curveAmount, shotForward);
         }
 
         shotFired = true;

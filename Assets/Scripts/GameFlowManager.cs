@@ -51,6 +51,11 @@ public class GameFlowManager : MonoBehaviour
         if (kickZone != null) kickZone.enabled = true;
         if (swipeShooter != null) swipeShooter.enabled = false;
         if (powerBar != null) powerBar.ResetPower();
+
+        if (CameraController.Instance != null)
+        {
+            CameraController.Instance.SwitchToJueguitosView();
+        }
     }
 
     /// <summary>
@@ -72,6 +77,11 @@ public class GameFlowManager : MonoBehaviour
         {
             swipeShooter.SetPowerMultiplier(frozenMultiplier);
             swipeShooter.enabled = true;
+        }
+
+        if (CameraController.Instance != null)
+        {
+            CameraController.Instance.SwitchToShootView();
         }
 
         Debug.Log($"Pasando a fase de disparo. Multiplicador congelado: {frozenMultiplier}");
