@@ -8,9 +8,16 @@ using UnityEngine;
 ///   (arriba/abajo = altura, izquierda/derecha = apertura del tiro).
 /// - Que tan curvado esta el trazo respecto a esa linea recta -> efecto
 ///   de curva (banana) durante el vuelo, via BallCurveEffect.
-/// A diferencia de la version inicial, ahora se registra el camino
-/// completo del dedo (no solo el punto donde soltas) para que la
-/// trayectoria coincida mejor con lo que dibujaste.
+/// - El multiplicador de potencia de la barra de jueguitos (lo fija
+///   GameFlowManager al pasar a esta fase).
+///
+/// Nota de version: la direccion del tiro ahora se normaliza antes de
+/// aplicar los factores de fuerza. Antes, el componente horizontal (x) y
+/// el de profundidad (z) se escalaban con el mismo forceMultiplier pero el
+/// x crudo del swipe es siempre mucho mas chico que la magnitud total, asi
+/// que el tiro se sentia "centrado" sin importar cuanto se swipeaba al
+/// costado. Al normalizar la direccion, el angulo del swipe define hacia
+/// donde apunta y la magnitud define solo la potencia total.
 /// </summary>
 public class SwipeShooter : MonoBehaviour
 {
@@ -29,18 +36,22 @@ public class SwipeShooter : MonoBehaviour
     [Tooltip("Multiplica la velocidad del swipe para convertirla en fuerza")]
     [SerializeField] private float forceMultiplier = 0.02f;
 
-    [Tooltip("Que tanto de la fuerza se convierte en altura (eje Y)")]
+    [Tooltip("Que tanto de la potencia se convierte en altura (eje Y)")]
     [SerializeField] private float verticalFactor = 1.2f;
 
-    [Tooltip("Que tanto de la fuerza se convierte en apertura lateral del tiro (eje X, apuntado inicial)")]
-    [SerializeField] private float horizontalFactor = 0.8f;
+    [Tooltip("Que tanto de la potencia se convierte en apertura lateral del tiro (eje X, apuntado inicial)")]
+    [SerializeField] private float horizontalFactor = 1f;
 
-    [Tooltip("Que tanto de la fuerza se convierte en profundidad (hacia el arco, eje Z)")]
+    [Tooltip("Que tanto de la potencia se convierte en profundidad (hacia el arco, eje Z)")]
     [SerializeField] private float forwardFactor = 1.5f;
 
     [Header("Curva del tiro")]
-    [Tooltip("Cuantos pixeles de 'panza' en el trazo equivalen a curva maxima (1.0)")]
-    [SerializeField] private float maxCurveScreenOffset = 120f;
+    [Tooltip("Que porcentaje del largo total del swipe equivale a curva maxima (0.3 = 30%). Relativo al gesto, no a pixeles fijos.")]
+    [SerializeField] private float maxCurveRatio = 0.3f;
+
+    [Header("Multiplicador de potencia (Jueguitos)")]
+    [Tooltip("Multiplica la fuerza final del tiro. Lo fija GameFlowManager segun la barra de jueguitos")]
+    [SerializeField] private float powerMultiplier = 1f;
 
     // Estado interno del gesto
     private Vector2 startPos;
@@ -53,6 +64,15 @@ public class SwipeShooter : MonoBehaviour
         {
             trailRenderer = GetComponent<SwipeTrailRenderer>();
         }
+    }
+
+    /// <summary>
+    /// Fija el multiplicador de potencia del proximo tiro. Llamado por
+    /// GameFlowManager al pasar de Jueguitos a la fase de disparo.
+    /// </summary>
+    public void SetPowerMultiplier(float multiplier)
+    {
+        powerMultiplier = Mathf.Max(0.1f, multiplier);
     }
 
     private void Update()
@@ -171,12 +191,15 @@ public class SwipeShooter : MonoBehaviour
 
     /// <summary>
     /// Mide cuanto se "arquea" el trazo respecto a la linea recta entre el
-    /// primer y el ultimo punto. Un trazo perfectamente recto da 0. Un trazo
-    /// que se curva hacia la derecha da positivo, hacia la izquierda negativo.
+    /// primer y el ultimo punto, como porcentaje del largo total del swipe.
+    /// Un trazo perfectamente recto da 0. Uno que se curva hacia la derecha
+    /// da positivo, hacia la izquierda negativo. Al ser relativo al largo
+    /// del propio swipe (y no a un valor fijo de pixeles), funciona igual
+    /// sin importar el tamano de pantalla o que tan largo sea el gesto.
     /// </summary>
     private float CalculateCurveAmount(List<Vector2> path, Vector2 start, Vector2 straightVector)
     {
-        if (path.Count < 3 || straightVector.sqrMagnitude < 0.001f)
+        if (path.Count < 3 || straightVector.magnitude < 1f)
         {
             return 0f;
         }
@@ -199,7 +222,8 @@ public class SwipeShooter : MonoBehaviour
             }
         }
 
-        return Mathf.Clamp(maxOffset / maxCurveScreenOffset, -1f, 1f);
+        float curveRatio = maxOffset / straightVector.magnitude;
+        return Mathf.Clamp(curveRatio / maxCurveRatio, -1f, 1f);
     }
 
     private void Shoot(Vector2 straightVector, float curveAmount)
@@ -210,18 +234,16 @@ public class SwipeShooter : MonoBehaviour
             return;
         }
 
-        // Convertimos la linea recta del swipe (pantalla, 2D) en la direccion
-        // base del tiro en el mundo (3D):
-        // - swipe.y (arriba/abajo) -> altura del tiro
-        // - swipe.x (izquierda/derecha) -> apertura lateral del tiro (apuntado)
-        // - magnitud total -> potencia hacia adelante (al arco)
-        // La curva del trazo (curveAmount) se suma aparte, como efecto durante el vuelo.
-
-        float power = straightVector.magnitude * forceMultiplier;
+        // Normalizamos la direccion del swipe: el angulo define hacia donde
+        // apunta el tiro, la magnitud define solo cuanta potencia total tiene.
+        // Asi el aim izquierda/derecha responde de verdad al angulo del gesto
+        // en vez de perderse frente a la componente de profundidad.
+        Vector2 dir2D = straightVector.normalized;
+        float power = straightVector.magnitude * forceMultiplier * powerMultiplier;
 
         Vector3 shootDirection = new Vector3(
-            straightVector.x * forceMultiplier * horizontalFactor,
-            Mathf.Max(straightVector.y, 0f) * forceMultiplier * verticalFactor,
+            dir2D.x * power * horizontalFactor,
+            Mathf.Max(dir2D.y, 0f) * power * verticalFactor,
             power * forwardFactor
         );
 
@@ -236,7 +258,7 @@ public class SwipeShooter : MonoBehaviour
 
         shotFired = true;
 
-        Debug.Log($"Tiro disparado. Direccion: {shootDirection}, Curva: {curveAmount}, Potencia swipe: {straightVector.magnitude}");
+        Debug.Log($"Tiro disparado. Direccion: {shootDirection}, Curva: {curveAmount}, Multiplicador: {powerMultiplier}, Potencia swipe: {straightVector.magnitude}");
     }
 
     /// <summary>

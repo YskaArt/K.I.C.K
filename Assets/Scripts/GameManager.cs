@@ -18,10 +18,22 @@ public class GameManager : MonoBehaviour
         UpdateScoreUI();
     }
 
+    /// <summary>
+    /// Suma 1 punto (uso original: cada jueguito exitoso durante la Fase 1).
+    /// </summary>
     public void AddPoint()
     {
+        AddPoints(1);
+    }
+
+    /// <summary>
+    /// Suma una cantidad especifica de puntos (uso: puntaje del gol, ya
+    /// calculado como puntos base de la zona x multiplicador de jueguitos).
+    /// </summary>
+    public void AddPoints(int amount)
+    {
         if (!gameActive) return;
-        score++;
+        score += amount;
         UpdateScoreUI();
     }
 

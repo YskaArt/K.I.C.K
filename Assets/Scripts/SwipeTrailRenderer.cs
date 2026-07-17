@@ -28,7 +28,7 @@ public class SwipeTrailRenderer : MonoBehaviour
 
     [Header("Optimizacion")]
     [Tooltip("Distancia minima en pixeles de pantalla entre un punto y el siguiente, para no acumular puntos de mas")]
-    [SerializeField] private float minPointDistance = 6f;
+    [SerializeField] private float minPointDistance = 4f;
 
     private LineRenderer lineRenderer;
     private readonly List<Vector2> screenPoints = new List<Vector2>();
