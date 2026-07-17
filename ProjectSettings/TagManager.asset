@@ -5,8 +5,6 @@ TagManager:
   serializedVersion: 3
   tags:
   - Ball
-  - Ground
-  - KickZone
   layers:
   - Default
   - TransparentFX
