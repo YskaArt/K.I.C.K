@@ -674,7 +674,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2059c64f7f6d4a146a91b8b7eb5c96ed, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.91
+      value: 0.67
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2059c64f7f6d4a146a91b8b7eb5c96ed, type: 3}
       propertyPath: m_LocalRotation.w
@@ -772,7 +772,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 48
+  m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!135 &617217839
 SphereCollider:
@@ -812,9 +812,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48fd87619781c084083a2f4440772eae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BallCurveEffect
-  curveDuration: 0.8
-  curveStrength: 1
+  curveDuration: 0.5
+  curveStrength: 10
   fadeOverTime: 1
+  useAdvancedSystem: 1
 --- !u!1 &621078393
 GameObject:
   m_ObjectHideFlags: 0
@@ -1032,6 +1033,9 @@ MonoBehaviour:
   horizontalFactor: 1
   forwardFactor: 1.5
   maxCurveRatio: 0.2
+  useAdvancedCurveAnalysis: 1
+  curveSamplePoints: 10
+  curveComplexityThreshold: 0.1
   powerMultiplier: 1
 --- !u!95 &768683374
 Animator:

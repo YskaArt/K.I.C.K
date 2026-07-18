@@ -2,6 +2,19 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
+/// Estructura que contiene datos detallados sobre la curva dibujada por el jugador
+/// </summary>
+[System.Serializable]
+public struct CurveData
+{
+    public float intensity;           // -1 a 1 (compatibilidad con sistema actual)
+    public float complexity;          // qué tan compleja es la curva (0-1)
+    public AnimationCurve progression; // cómo cambia la curva en el tiempo
+    public Vector2[] inflectionPoints; // puntos donde cambia dirección
+    public float totalCurveLength;    // longitud total de la curva vs línea recta
+}
+
+/// <summary>
 /// Detecta el swipe (touch o mouse, para poder probar en el editor),
 /// muestra en pantalla el trazo dibujado, y dispara la pelota usando:
 /// - La direccion real hacia el arco (aimTarget) como base del tiro -> el
@@ -51,6 +64,16 @@ public class SwipeShooter : MonoBehaviour
     [Header("Curva del tiro")]
     [Tooltip("Que porcentaje del largo total del swipe equivale a curva maxima (0.3 = 30%). Relativo al gesto, no a pixeles fijos.")]
     [SerializeField] private float maxCurveRatio = 0.3f;
+
+    [Header("Análisis de Curva Mejorado")]
+    [Tooltip("Usa el sistema mejorado de análisis de curva que respeta mejor el trazo dibujado")]
+    [SerializeField] private bool useAdvancedCurveAnalysis = true;
+    
+    [Tooltip("Cuántos puntos samplear a lo largo del trazo para analizar la progresión de curva")]
+    [SerializeField] private int curveSamplePoints = 10;
+    
+    [Tooltip("Qué tan compleja debe ser la curva para aplicar efectos especiales (0-1)")]
+    [SerializeField] private float curveComplexityThreshold = 0.1f;
 
     [Header("Multiplicador de potencia (Jueguitos)")]
     [Tooltip("Multiplica la fuerza final del tiro. Lo fija GameFlowManager segun la barra de jueguitos")]
@@ -187,9 +210,17 @@ public class SwipeShooter : MonoBehaviour
             return;
         }
 
-        float curveAmount = CalculateCurveAmount(path, startPos, straightVector);
-
-        Shoot(straightVector, curveAmount);
+        // Usar análisis mejorado o sistema legacy
+        if (useAdvancedCurveAnalysis)
+        {
+            CurveData curveData = AnalyzeCurveAdvanced(path, startPos, straightVector);
+            ShootAdvanced(straightVector, curveData);
+        }
+        else
+        {
+            float curveAmount = CalculateCurveAmount(path, startPos, straightVector);
+            Shoot(straightVector, curveAmount);
+        }
     }
 
     /// <summary>
@@ -280,6 +311,216 @@ public class SwipeShooter : MonoBehaviour
         shotFired = true;
 
         Debug.Log($"Tiro disparado. Direccion: {shootDirection}, Curva: {curveAmount}, Multiplicador: {powerMultiplier}, Potencia swipe: {straightVector.magnitude}");
+    }
+
+    /// <summary>
+    /// Análisis avanzado que captura la progresión completa de la curva dibujada
+    /// </summary>
+    private CurveData AnalyzeCurveAdvanced(List<Vector2> path, Vector2 start, Vector2 straightVector)
+    {
+        CurveData curveData = new CurveData();
+
+        // Fallback al método legacy si hay pocos puntos
+        if (path.Count < 3 || straightVector.magnitude < 1f)
+        {
+            curveData.intensity = 0f;
+            curveData.complexity = 0f;
+            curveData.progression = AnimationCurve.Constant(0f, 1f, 0f);
+            curveData.inflectionPoints = new Vector2[0];
+            curveData.totalCurveLength = straightVector.magnitude;
+            return curveData;
+        }
+
+        // En lugar de usar solo perpendicular, vamos a analizar la desviación REAL del trazo
+        // respecto a la línea recta, considerando TODA la información 2D
+        
+        int sampleCount = Mathf.Min(curveSamplePoints, path.Count);
+        float[] curveProgressionX = new float[sampleCount]; // Desviación lateral real
+        float[] curveProgressionY = new float[sampleCount]; // Desviación vertical real
+        List<Vector2> inflectionPointsList = new List<Vector2>();
+        
+        float totalPathLength = 0f;
+        float maxAbsDeviationX = 0f;
+        float maxAbsDeviationY = 0f;
+
+        // Calcular la longitud real del trazo
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            totalPathLength += Vector2.Distance(path[i], path[i + 1]);
+        }
+
+        // Analizar la desviación del trazo real respecto a la línea recta
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / (sampleCount - 1);
+            int pathIndex = Mathf.FloorToInt(t * (path.Count - 1));
+            pathIndex = Mathf.Clamp(pathIndex, 0, path.Count - 1);
+
+            Vector2 currentPoint = path[pathIndex];
+            
+            // Punto equivalente en la línea recta (interpolación lineal del inicio al final)
+            Vector2 straightPoint = Vector2.Lerp(start, start + straightVector, t);
+            
+            // Desviación real en ambos ejes
+            Vector2 deviation = currentPoint - straightPoint;
+            
+            // Normalizar por la longitud del trazo para que sea independiente del tamaño
+            curveProgressionX[i] = deviation.x / straightVector.magnitude;
+            curveProgressionY[i] = deviation.y / straightVector.magnitude;
+            
+            if (Mathf.Abs(deviation.x) > maxAbsDeviationX) maxAbsDeviationX = Mathf.Abs(deviation.x);
+            if (Mathf.Abs(deviation.y) > maxAbsDeviationY) maxAbsDeviationY = Mathf.Abs(deviation.y);
+
+            // Detectar puntos de inflexión en X
+            if (i > 0 && i < sampleCount - 1)
+            {
+                float prevX = curveProgressionX[i - 1];
+                float nextX = curveProgressionX[i + 1];
+                
+                if ((prevX < curveProgressionX[i] && nextX < curveProgressionX[i]) ||
+                    (prevX > curveProgressionX[i] && nextX > curveProgressionX[i]))
+                {
+                    inflectionPointsList.Add(currentPoint);
+                }
+            }
+        }
+
+        // Crear AnimationCurve que combine X e Y, priorizando la desviación más prominente
+        Keyframe[] keys = new Keyframe[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float time = (float)i / (sampleCount - 1);
+            
+            // Usar la desviación más prominente como valor principal
+            float combinedProgression = curveProgressionX[i];
+            if (maxAbsDeviationY > maxAbsDeviationX)
+            {
+                // Si la desviación vertical es más prominente, usarla pero escalada
+                combinedProgression = curveProgressionY[i] * 0.7f;
+            }
+            
+            keys[i] = new Keyframe(time, combinedProgression);
+        }
+
+        curveData.progression = new AnimationCurve(keys);
+        
+        // Suavizar la curva
+        for (int i = 0; i < keys.Length; i++)
+        {
+            curveData.progression.SmoothTangents(i, 0.5f);
+        }
+
+        // Métricas finales
+        float maxTotalDeviation = Mathf.Max(maxAbsDeviationX, maxAbsDeviationY);
+        curveData.intensity = Mathf.Clamp((maxTotalDeviation / straightVector.magnitude) / maxCurveRatio, -1f, 1f);
+        curveData.complexity = Mathf.Clamp01(inflectionPointsList.Count / 3f);
+        curveData.inflectionPoints = inflectionPointsList.ToArray();
+        curveData.totalCurveLength = totalPathLength;
+
+        // Guardar las desviaciones en X e Y para uso posterior (hack: usar campos no utilizados)
+        // Esto nos permitirá acceder a ambas componentes en CalculateAverageCurveDirection
+        
+        Debug.Log($"Análisis curva: MaxDevX={maxAbsDeviationX:F2}, MaxDevY={maxAbsDeviationY:F2}, Intensidad={curveData.intensity:F2}");
+
+        return curveData;
+    }
+
+    /// <summary>
+    /// Versión mejorada del disparo que usa los datos completos de la curva
+    /// </summary>
+    private void ShootAdvanced(Vector2 straightVector, CurveData curveData)
+    {
+        if (ball == null)
+        {
+            Debug.LogWarning("SwipeShooter: falta asignar el Rigidbody de la pelota.");
+            return;
+        }
+
+        // Misma lógica base que el método Shoot original
+        Vector3 toTarget = aimTarget != null
+            ? (aimTarget.position - ball.position)
+            : Vector3.forward;
+        toTarget.y = 0f;
+
+        if (toTarget.sqrMagnitude < 0.0001f)
+        {
+            toTarget = Vector3.forward;
+        }
+
+        Vector3 shotForward = toTarget.normalized;
+        Vector3 shotRight = Vector3.Cross(Vector3.up, shotForward).normalized;
+
+        Vector2 dir2D = straightVector.normalized;
+        float power = straightVector.magnitude * forceMultiplier * powerMultiplier;
+
+        Vector3 shootDirection =
+            shotForward * (power * forwardFactor) +
+            shotRight * (dir2D.x * power * horizontalFactor) +
+            Vector3.up * (Mathf.Max(dir2D.y, 0f) * power * verticalFactor);
+
+        ball.linearVelocity = Vector3.zero;
+        ball.AddForce(shootDirection, ForceMode.Impulse);
+
+        // Usar el sistema avanzado de curva
+        BallCurveEffect curveEffect = ball.GetComponent<BallCurveEffect>();
+        if (curveEffect != null)
+        {
+            // Calcular la dirección de curva promedio basada en la progresión real de la curva
+            Vector3 averageCurveDirection = CalculateAverageCurveDirection(curveData, shotRight);
+            curveEffect.ApplyCurveAdvanced(curveData, averageCurveDirection);
+        }
+
+        shotFired = true;
+
+        // Debug.Log($"Tiro avanzado disparado. Direccion: {shootDirection}, Curva: {curveData.intensity}, Complejidad: {curveData.complexity}, Inflexiones: {curveData.inflectionPoints.Length}");
+    }
+
+    /// <summary>
+    /// Calcula la dirección promedio de la curva basada en la progresión completa del trazo
+    /// </summary>
+    private Vector3 CalculateAverageCurveDirection(CurveData curveData, Vector3 shotRight)
+    {
+        if (curveData.progression == null || curveData.progression.length == 0)
+        {
+            Debug.Log("CalculateAverageCurveDirection: Sin progresión, usando shotRight básico");
+            return shotRight; // Fallback a curva lateral básica
+        }
+
+        // Samplear la curva en varios puntos para obtener la dirección promedio
+        int samples = 10;
+        Vector3 totalDirection = Vector3.zero;
+        
+        for (int i = 0; i < samples; i++)
+        {
+            float t = (float)i / (samples - 1);
+            float curveValue = curveData.progression.Evaluate(t);
+            
+            // Combinar componente lateral con componente vertical basado en el valor de la curva
+            Vector3 sampleDirection = shotRight * curveValue;
+            
+            // Si la curva es muy pronunciada, agregar componente vertical
+            if (Mathf.Abs(curveValue) > 0.3f)
+            {
+                sampleDirection += Vector3.up * (curveValue * 0.2f);
+            }
+            
+            totalDirection += sampleDirection;
+        }
+        
+        Vector3 result = totalDirection.normalized;
+        
+        // Si la dirección calculada es muy pequeña, usar una dirección por defecto
+        if (result.magnitude < 0.1f)
+        {
+            result = shotRight * Mathf.Sign(curveData.intensity);
+            Debug.Log($"CalculateAverageCurveDirection: Dirección muy pequeña, usando fallback: {result}");
+        }
+        else
+        {
+            Debug.Log($"CalculateAverageCurveDirection: Dirección calculada: {result}, Intensidad: {curveData.intensity}");
+        }
+        
+        return result;
     }
 
     /// <summary>
