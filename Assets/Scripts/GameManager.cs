@@ -40,7 +40,7 @@ public class GameManager : MonoBehaviour
     public void GameOver()
     {
         if (!gameActive) return;
-
+        Time.timeScale = 0f;
         gameActive = false;
         finalScoreText.text = "Score: " + score;
         gameOverPanel.SetActive(true);

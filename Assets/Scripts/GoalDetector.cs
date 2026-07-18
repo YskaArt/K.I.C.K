@@ -25,7 +25,7 @@ public class GoalDetector : MonoBehaviour
     public UnityEvent<int> onGoalScored;
 
     private bool alreadyScored;
-
+    public GameManager manager;
     private void OnTriggerEnter(Collider other)
     {
         if (onlyOnce && alreadyScored) return;
@@ -37,10 +37,9 @@ public class GoalDetector : MonoBehaviour
         // El multiplicador de los jueguitos se suma aca cuando este listo
         // ese sistema; por ahora el puntaje final es el valor base de la zona.
         int finalScore = pointValue;
-
-        Debug.Log($"Gol! Zona: {gameObject.name}, Puntos: {finalScore}");
-
-        onGoalScored?.Invoke(finalScore);
+        manager.AddPoints(finalScore);
+        manager.GameOver();
+       
     }
 
     /// <summary>
