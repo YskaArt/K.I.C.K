@@ -32,6 +32,9 @@ public class SwipeShooter : MonoBehaviour
     [Tooltip("Animator del personaje que ejecuta el disparo")]
     [SerializeField] private Animator playerAnimator;
 
+    [Tooltip("AudioSource para reproducir efectos de sonido")]
+    [SerializeField] private AudioSource audioSource;
+
     [Header("Paso 1: Tap + Raycast (elegir punto del arco)")]
     [Tooltip("Camara desde la que se hace el raycast al tocar la pantalla. Si esta vacio usa Camera.main")]
     [SerializeField] private Camera aimCamera;
@@ -404,10 +407,24 @@ public class SwipeShooter : MonoBehaviour
             curveEffect.ApplyCurve(curveAmount, shotForward, flightTime);
         }
 
-        // Disparar el trigger de animación
+        // Disparar el trigger de animación y reproducir sonido
         if (playerAnimator != null)
         {
             playerAnimator.SetTrigger("Shoot");
+        }
+
+        // Reproducir sonido de patada
+        if (audioSource != null)
+        {
+            AudioClip patadaClip = Resources.Load<AudioClip>("SFX/Patada");
+            if (patadaClip != null)
+            {
+                audioSource.PlayOneShot(patadaClip);
+            }
+            else
+            {
+                Debug.LogWarning("SwipeShooter: No se pudo cargar el audio 'SFX/Patada'");
+            }
         }
 
         shotFired = true;

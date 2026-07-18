@@ -7,6 +7,7 @@ public class KickZone : MonoBehaviour
     [SerializeField] private JueguitosPowerBar powerBar;
     [SerializeField] private Animator playerAnimator;
     [SerializeField] private GameObject kickIndicator; // UI "¡AHORA!" opcional
+    [SerializeField] private AudioSource audioSource; // Para reproducir efectos de sonido
 
     [Tooltip("Cuanto carga la barra cada jueguito exitoso (0-1). Ej: 0.08 = necesitas ~13 jueguitos para llenarla")]
     [SerializeField] private float chargePerKick = 0.08f;
@@ -24,7 +25,25 @@ public class KickZone : MonoBehaviour
             if (powerBar != null)
                 powerBar.AddCharge(chargePerKick);
 
-            playerAnimator.SetTrigger("Kick");
+            // Activar trigger de animación y reproducir sonido
+            if (playerAnimator != null)
+            {
+                playerAnimator.SetTrigger("Kick");
+            }
+
+            // Reproducir sonido de jueguito
+            if (audioSource != null)
+            {
+                AudioClip jueguitoClip = Resources.Load<AudioClip>("SFX/jueguito");
+                if (jueguitoClip != null)
+                {
+                    audioSource.PlayOneShot(jueguitoClip);
+                }
+                else
+                {
+                    Debug.LogWarning("KickZone: No se pudo cargar el audio 'SFX/jueguito'");
+                }
+            }
         }
     }
 
