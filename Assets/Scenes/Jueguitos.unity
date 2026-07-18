@@ -3131,6 +3131,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 345408007}
     m_Modifications:
+    - target: {fileID: 4348366273195229186, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f6a990325266a524683a117004383ff3, type: 2}
+    - target: {fileID: 6180325826466049261, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
+    - target: {fileID: 6430452657317836864, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
     - target: {fileID: 8189338903577795757, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
       propertyPath: m_LocalPosition.x
       value: 3.22
@@ -3175,6 +3187,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 8891496107658707601, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3212,6 +3228,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SwipeShooter
   ball: {fileID: 617217838}
   trailRenderer: {fileID: 1780285737}
+  playerAnimator: {fileID: 1920393601}
   aimCamera: {fileID: 1233706120}
   goalLayerMask:
     serializedVersion: 2

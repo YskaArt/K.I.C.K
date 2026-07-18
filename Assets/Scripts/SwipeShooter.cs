@@ -29,6 +29,9 @@ public class SwipeShooter : MonoBehaviour
     [Tooltip("Dibuja el trazo del swipe en pantalla. Si esta vacio se busca en este mismo GameObject")]
     [SerializeField] private SwipeTrailRenderer trailRenderer;
 
+    [Tooltip("Animator del personaje que ejecuta el disparo")]
+    [SerializeField] private Animator playerAnimator;
+
     [Header("Paso 1: Tap + Raycast (elegir punto del arco)")]
     [Tooltip("Camara desde la que se hace el raycast al tocar la pantalla. Si esta vacio usa Camera.main")]
     [SerializeField] private Camera aimCamera;
@@ -399,6 +402,12 @@ public class SwipeShooter : MonoBehaviour
         if (curveEffect != null)
         {
             curveEffect.ApplyCurve(curveAmount, shotForward, flightTime);
+        }
+
+        // Disparar el trigger de animación
+        if (playerAnimator != null)
+        {
+            playerAnimator.SetTrigger("Shoot");
         }
 
         shotFired = true;
