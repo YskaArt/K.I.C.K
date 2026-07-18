@@ -3131,18 +3131,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 345408007}
     m_Modifications:
-    - target: {fileID: 4348366273195229186, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
+    - target: {fileID: 5049631568940368828, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: ball
       value: 
-      objectReference: {fileID: 2100000, guid: f6a990325266a524683a117004383ff3, type: 2}
-    - target: {fileID: 6180325826466049261, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
+      objectReference: {fileID: 617217838}
+    - target: {fileID: 5049631568940368828, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: aimCamera
       value: 
-      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
-    - target: {fileID: 6430452657317836864, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
+      objectReference: {fileID: 1233706120}
+    - target: {fileID: 5049631568940368828, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: aimMarker
       value: 
-      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
+      objectReference: {fileID: 1397385502}
+    - target: {fileID: 5049631568940368828, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+      propertyPath: trailRenderer
+      value: 
+      objectReference: {fileID: 1780285737}
     - target: {fileID: 8189338903577795757, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
       propertyPath: m_LocalPosition.x
       value: 3.22
@@ -3187,26 +3191,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 8891496107658707601, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
-      value: 
-      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8857930606805960215, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1920393602}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
 --- !u!4 &1920393599 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8189338903577795757, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
-  m_PrefabInstance: {fileID: 1920393598}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1920393600 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8857930606805960215, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
   m_PrefabInstance: {fileID: 1920393598}
   m_PrefabAsset: {fileID: 0}
 --- !u!95 &1920393601 stripped
@@ -3214,34 +3206,17 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 2830033582183368407, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
   m_PrefabInstance: {fileID: 1920393598}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1920393602
+--- !u!114 &1920393602 stripped
 MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 5049631568940368828, guid: 27c32269bdaba804f82346b03fcdf495, type: 3}
+  m_PrefabInstance: {fileID: 1920393598}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1920393600}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 29a153d0448e6224da4f9dcdd8cec5a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SwipeShooter
-  ball: {fileID: 617217838}
-  trailRenderer: {fileID: 1780285737}
-  playerAnimator: {fileID: 1920393601}
-  aimCamera: {fileID: 1233706120}
-  goalLayerMask:
-    serializedVersion: 2
-    m_Bits: 8
-  aimRaycastDistance: 150
-  aimMarker: {fileID: 1397385502}
-  minSwipeDistance: 50
-  maxFlightTime: 2
-  minFlightTime: 1.5
-  maxSwipeReferenceDistance: 200
-  maxCurveRatio: 0.8
-  curveCompensationDistance: 35
-  powerMultiplier: 0.1
 --- !u!1 &1940401991
 GameObject:
   m_ObjectHideFlags: 0

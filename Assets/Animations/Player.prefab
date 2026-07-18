@@ -22,15 +22,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.4533
+      value: 3.22
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.11
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 5.6679897
+      value: -0.15
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalRotation.w
@@ -107,11 +107,11 @@ PrefabInstance:
     - target: {fileID: -6635996063216330837, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: -1580535799172915004, guid: 5e02e1d9754479d45bf6030965dfcb94, type: 3}
+      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
     - target: {fileID: -5831783584820460794, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2781410738928257789, guid: 5e02e1d9754479d45bf6030965dfcb94, type: 3}
+      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
     - target: {fileID: -5480977901411583989, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 68.63006
@@ -283,7 +283,7 @@ PrefabInstance:
     - target: {fileID: 957060811223988695, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2781410738928257789, guid: 5e02e1d9754479d45bf6030965dfcb94, type: 3}
+      objectReference: {fileID: 2100000, guid: 3cdf02405fdd7d94db91a0694a28a0fb, type: 2}
     - target: {fileID: 1330755669629619180, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 12.131165
@@ -367,7 +367,7 @@ PrefabInstance:
     - target: {fileID: 5365011132767583044, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2781410738928257789, guid: 5e02e1d9754479d45bf6030965dfcb94, type: 3}
+      objectReference: {fileID: 2100000, guid: f6a990325266a524683a117004383ff3, type: 2}
     - target: {fileID: 5465940246521907071, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 17.400564
@@ -463,5 +463,46 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5049631568940368828}
   m_SourcePrefab: {fileID: 100100000, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
+--- !u!95 &2830033582183368407 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
+  m_PrefabInstance: {fileID: 8515419750463437638}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8857930606805960215 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 57f77166e7ddf2c408aca8c8e99ee8f3, type: 3}
+  m_PrefabInstance: {fileID: 8515419750463437638}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5049631568940368828
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8857930606805960215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29a153d0448e6224da4f9dcdd8cec5a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SwipeShooter
+  ball: {fileID: 0}
+  trailRenderer: {fileID: 0}
+  playerAnimator: {fileID: 2830033582183368407}
+  aimCamera: {fileID: 0}
+  goalLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
+  aimRaycastDistance: 150
+  aimMarker: {fileID: 0}
+  minSwipeDistance: 50
+  maxFlightTime: 2
+  minFlightTime: 1.5
+  maxSwipeReferenceDistance: 200
+  maxCurveRatio: 0.8
+  curveCompensationDistance: 35
+  powerMultiplier: 0.1
