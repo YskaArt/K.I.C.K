@@ -31,6 +31,9 @@ public class SwipeShooter : MonoBehaviour
     [Tooltip("Punto al que apunta el tiro por defecto (el arco/centro). El swipe desvia alrededor de esta direccion. Si esta vacio, usa Vector3.forward como respaldo.")]
     [SerializeField] private Transform aimTarget;
 
+    [Tooltip("Animator del personaje que ejecuta el disparo")]
+    [SerializeField] private Animator playerAnimator;
+
     [Header("Configuracion del swipe")]
     [Tooltip("Distancia minima en pixeles para que cuente como swipe valido")]
     [SerializeField] private float minSwipeDistance = 50f;
@@ -275,6 +278,12 @@ public class SwipeShooter : MonoBehaviour
             // completo, para que el eje de la curva sea siempre estable
             // respecto al arco, sin importar cuanto desvio el swipe.
             curveEffect.ApplyCurve(curveAmount, shotForward);
+        }
+
+        // Disparar el trigger de animación
+        if (playerAnimator != null)
+        {
+            playerAnimator.SetTrigger("Shoot");
         }
 
         shotFired = true;
