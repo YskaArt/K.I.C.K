@@ -2,35 +2,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Estructura que contiene datos detallados sobre la curva dibujada por el jugador
-/// </summary>
-[System.Serializable]
-public struct CurveData
-{
-    public float intensity;           // -1 a 1 (compatibilidad con sistema actual)
-    public float complexity;          // qué tan compleja es la curva (0-1)
-    public AnimationCurve progression; // cómo cambia la curva en el tiempo
-    public Vector2[] inflectionPoints; // puntos donde cambia dirección
-    public float totalCurveLength;    // longitud total de la curva vs línea recta
-}
-
-/// <summary>
-/// Detecta el swipe (touch o mouse, para poder probar en el editor),
-/// muestra en pantalla el trazo dibujado, y dispara la pelota usando:
-/// - La direccion real hacia el arco (aimTarget) como base del tiro -> el
-///   swipe solo desvia alrededor de esa linea (no depende de ejes fijos
-///   del mundo ni de como este rotada la camara).
-/// - Que tan curvado esta el trazo respecto a la linea recta del swipe -> efecto
-///   de curva (banana) durante el vuelo, via BallCurveEffect.
-/// - El multiplicador de potencia de la barra de jueguitos (lo fija
-///   GameFlowManager al pasar a esta fase).
+/// Flujo de disparo en dos pasos:
 ///
-/// Nota de version: antes la direccion se armaba con ejes fijos del mundo
-/// (X/Y/Z), lo que hacia que el tiro se fuera para cualquier lado si la
-/// camara cambiaba de angulo o el arco no estaba alineado con el eje Z.
-/// Ahora se calcula "shotForward" como la direccion real de la pelota al
-/// arco, y el swipe (izq/der = shotRight, arriba/abajo = altura) se aplica
-/// relativo a esa linea. El resultado es estable sin importar la camara.
+/// 1. TAP: el jugador toca la pantalla. Se hace un raycast desde la camara
+///    hacia ese punto de pantalla, y el punto 3D exacto donde pega contra el
+///    arco queda guardado como objetivo del tiro. Se muestra un marcador ahi.
+///
+/// 2. SWIPE: una vez elegido el punto, el jugador arrastra el dedo para
+///    definir la potencia (largo del swipe) y la curva (forma del trazo).
+///    El punto de destino YA esta fijo desde el paso 1, asi que el tiro
+///    coincide siempre con lo que se toco -- no hay formula aproximada de
+///    por medio.
+///
+/// La curva sigue funcionando igual que antes: si el trazo se curva, el
+/// punto de impacto se desplaza levemente hacia el lado contrario al armar
+/// el tiro, y despues BallCurveEffect lo trae de vuelta durante el vuelo
+/// (efecto "banana"), pero ahora esa compensacion es alrededor del punto
+/// real tocado, no de un centro aproximado del arco.
 /// </summary>
 public class SwipeShooter : MonoBehaviour
 {
@@ -41,45 +29,48 @@ public class SwipeShooter : MonoBehaviour
     [Tooltip("Dibuja el trazo del swipe en pantalla. Si esta vacio se busca en este mismo GameObject")]
     [SerializeField] private SwipeTrailRenderer trailRenderer;
 
-    [Tooltip("Punto al que apunta el tiro por defecto (el arco/centro). El swipe desvia alrededor de esta direccion. Si esta vacio, usa Vector3.forward como respaldo.")]
-    [SerializeField] private Transform aimTarget;
+    [Header("Paso 1: Tap + Raycast (elegir punto del arco)")]
+    [Tooltip("Camara desde la que se hace el raycast al tocar la pantalla. Si esta vacio usa Camera.main")]
+    [SerializeField] private Camera aimCamera;
 
-    [Header("Configuracion del swipe")]
-    [Tooltip("Distancia minima en pixeles para que cuente como swipe valido")]
+    [Tooltip("Capas validas para elegir el punto de disparo. Poné aca SOLO la capa del arco (crea una capa 'Goal' y asignasela al collider del arco)")]
+    [SerializeField] private LayerMask goalLayerMask = ~0;
+
+    [Tooltip("Distancia maxima del raycast, en unidades del mundo")]
+    [SerializeField] private float aimRaycastDistance = 100f;
+
+    [Tooltip("Marcador visual que se mueve al punto elegido (opcional). Cualquier GameObject, por ejemplo una esferita o un decal")]
+    [SerializeField] private GameObject aimMarker;
+
+    [Header("Paso 2: Swipe (potencia y curva)")]
+    [Tooltip("Distancia minima en pixeles para que el swipe cuente como valido")]
     [SerializeField] private float minSwipeDistance = 50f;
 
-    [Header("Fuerza del disparo")]
-    [Tooltip("Multiplica la velocidad del swipe para convertirla en fuerza")]
-    [SerializeField] private float forceMultiplier = 0.02f;
+    [Header("Tiempo de vuelo (parabola)")]
+    [Tooltip("Duracion del vuelo con un swipe muy corto/lento (tiro mas arqueado)")]
+    [SerializeField] private float maxFlightTime = 1.1f;
 
-    [Tooltip("Que tanto de la potencia se convierte en altura (eje Y)")]
-    [SerializeField] private float verticalFactor = 1.2f;
+    [Tooltip("Duracion del vuelo con un swipe muy largo/rapido (tiro mas directo y plano)")]
+    [SerializeField] private float minFlightTime = 0.55f;
 
-    [Tooltip("Que tanto de la potencia se convierte en apertura lateral del tiro (eje X, apuntado inicial)")]
-    [SerializeField] private float horizontalFactor = 1f;
-
-    [Tooltip("Que tanto de la potencia se convierte en profundidad (hacia el arco, eje Z)")]
-    [SerializeField] private float forwardFactor = 1.5f;
+    [Tooltip("Largo de swipe (en pixeles) que ya se considera 'swipe maximo' para el calculo de potencia")]
+    [SerializeField] private float maxSwipeReferenceDistance = 500f;
 
     [Header("Curva del tiro")]
     [Tooltip("Que porcentaje del largo total del swipe equivale a curva maxima (0.3 = 30%). Relativo al gesto, no a pixeles fijos.")]
     [SerializeField] private float maxCurveRatio = 0.3f;
 
-    [Header("Análisis de Curva Mejorado")]
-    [Tooltip("Usa el sistema mejorado de análisis de curva que respeta mejor el trazo dibujado")]
-    [SerializeField] private bool useAdvancedCurveAnalysis = true;
-    
-    [Tooltip("Cuántos puntos samplear a lo largo del trazo para analizar la progresión de curva")]
-    [SerializeField] private int curveSamplePoints = 10;
-    
-    [Tooltip("Qué tan compleja debe ser la curva para aplicar efectos especiales (0-1)")]
-    [SerializeField] private float curveComplexityThreshold = 0.1f;
+    [Tooltip("Cuanto se corre el punto de impacto (en unidades del mundo) cuando hay curva maxima. La curva despues trae la pelota de vuelta durante el vuelo.")]
+    [SerializeField] private float curveCompensationDistance = 1.2f;
 
     [Header("Multiplicador de potencia (Jueguitos)")]
-    [Tooltip("Multiplica la fuerza final del tiro. Lo fija GameFlowManager segun la barra de jueguitos")]
+    [Tooltip("Achica el tiempo de vuelo (tiro mas directo/potente) sin perder precision. Lo fija GameFlowManager segun la barra de jueguitos")]
     [SerializeField] private float powerMultiplier = 1f;
 
-    // Estado interno del gesto
+    // Estado interno
+    private bool aimPointSelected;
+    private Vector3 selectedAimPoint;
+
     private Vector2 startPos;
     private bool isDragging;
     private bool shotFired;
@@ -89,6 +80,28 @@ public class SwipeShooter : MonoBehaviour
         if (trailRenderer == null)
         {
             trailRenderer = GetComponent<SwipeTrailRenderer>();
+        }
+
+        if (aimCamera == null)
+        {
+            aimCamera = Camera.main;
+        }
+    }
+
+    /// <summary>
+    /// Se ejecuta cada vez que el script pasa de desactivado a activado
+    /// (GameFlowManager lo activa al entrar a la fase de disparo). Arranca
+    /// la ronda siempre pidiendo un tap nuevo para elegir el punto.
+    /// </summary>
+    private void OnEnable()
+    {
+        aimPointSelected = false;
+        isDragging = false;
+        shotFired = false;
+
+        if (aimMarker != null)
+        {
+            aimMarker.SetActive(false);
         }
     }
 
@@ -102,6 +115,78 @@ public class SwipeShooter : MonoBehaviour
     }
 
     private void Update()
+    {
+        if (!aimPointSelected)
+        {
+            HandleAimTapInput();
+        }
+        else
+        {
+            HandleSwipeInput();
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // PASO 1: Tap + Raycast
+    // ---------------------------------------------------------------
+
+    private void HandleAimTapInput()
+    {
+        if (shotFired) return;
+
+        bool tapped = false;
+        Vector2 tapPos = Vector2.zero;
+
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        {
+            tapped = true;
+            tapPos = Input.GetTouch(0).position;
+        }
+        else if (Input.GetMouseButtonDown(0))
+        {
+            tapped = true;
+            tapPos = Input.mousePosition;
+        }
+
+        if (!tapped) return;
+
+        TrySelectAimPoint(tapPos);
+    }
+
+    private void TrySelectAimPoint(Vector2 screenPos)
+    {
+        if (aimCamera == null)
+        {
+            Debug.LogWarning("SwipeShooter: no hay camara asignada para el raycast del tap (Aim Camera / Camera.main).");
+            return;
+        }
+
+        Ray ray = aimCamera.ScreenPointToRay(screenPos);
+
+        if (Physics.Raycast(ray, out RaycastHit hit, aimRaycastDistance, goalLayerMask))
+        {
+            selectedAimPoint = hit.point;
+            aimPointSelected = true;
+
+            if (aimMarker != null)
+            {
+                aimMarker.SetActive(true);
+                aimMarker.transform.position = selectedAimPoint;
+            }
+
+            Debug.Log($"Punto de disparo elegido: {selectedAimPoint}");
+        }
+        else
+        {
+            Debug.Log("SwipeShooter: el tap no pego contra el arco (revisa el Goal Layer Mask). Proba de nuevo.");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // PASO 2: Swipe (potencia y curva)
+    // ---------------------------------------------------------------
+
+    private void HandleSwipeInput()
     {
         // --- Soporte para mobile (touch) ---
         if (Input.touchCount > 0)
@@ -142,7 +227,7 @@ public class SwipeShooter : MonoBehaviour
 
     private void OnDragStart(Vector2 screenPos)
     {
-        if (shotFired) return; // ya se disparo, no permitir otro swipe hasta reiniciar
+        if (shotFired) return;
 
         startPos = screenPos;
         isDragging = true;
@@ -206,30 +291,22 @@ public class SwipeShooter : MonoBehaviour
 
         if (straightVector.magnitude < minSwipeDistance)
         {
-            // swipe muy corto, no dispara
+            // swipe muy corto, no dispara (el punto elegido se mantiene, puede reintentar el swipe)
             return;
         }
 
-        // Usar análisis mejorado o sistema legacy
-        if (useAdvancedCurveAnalysis)
-        {
-            CurveData curveData = AnalyzeCurveAdvanced(path, startPos, straightVector);
-            ShootAdvanced(straightVector, curveData);
-        }
-        else
-        {
-            float curveAmount = CalculateCurveAmount(path, startPos, straightVector);
-            Shoot(straightVector, curveAmount);
-        }
+        float curveAmount = CalculateCurveAmount(path, startPos, straightVector);
+
+        Debug.Log($"[Diagnostico curva] Puntos del trazo: {path.Count}, Curva detectada: {curveAmount:F2} (0 = recto, +1 = maxima a la derecha, -1 = maxima a la izquierda)");
+
+        Shoot(straightVector, curveAmount);
     }
 
     /// <summary>
-    /// Mide cuanto se "arquea" el trazo respecto a la linea recta entre el
-    /// primer y el ultimo punto, como porcentaje del largo total del swipe.
-    /// Un trazo perfectamente recto da 0. Uno que se curva hacia la derecha
-    /// da positivo, hacia la izquierda negativo. Al ser relativo al largo
-    /// del propio swipe (y no a un valor fijo de pixeles), funciona igual
-    /// sin importar el tamano de pantalla o que tan largo sea el gesto.
+    /// Mide cuanto y hacia que lado se "arquea" el trazo respecto a la
+    /// linea recta entre el primer y el ultimo punto (integrando el area
+    /// entre el trazo y esa linea recta, para que una "C" completa de un
+    /// resultado estable y no solo dependa de un pico de ruido puntual).
     /// </summary>
     private float CalculateCurveAmount(List<Vector2> path, Vector2 start, Vector2 straightVector)
     {
@@ -239,24 +316,33 @@ public class SwipeShooter : MonoBehaviour
         }
 
         Vector2 straightDir = straightVector.normalized;
-        // Perpendicular a la direccion recta, en pantalla
         Vector2 perp = new Vector2(-straightDir.y, straightDir.x);
 
-        float maxOffset = 0f;
+        float accumulatedArea = 0f;
+        float totalLength = 0f;
 
-        // Buscamos el punto del trazo que mas se aleja de la linea recta
-        // (asi el "efecto" que se ve en pantalla es el que se aplica al tiro)
-        foreach (Vector2 point in path)
+        for (int i = 0; i < path.Count - 1; i++)
         {
-            float offset = Vector2.Dot(point - start, perp);
+            Vector2 pointA = path[i];
+            Vector2 pointB = path[i + 1];
 
-            if (Mathf.Abs(offset) > Mathf.Abs(maxOffset))
-            {
-                maxOffset = offset;
-            }
+            float offsetA = Vector2.Dot(pointA - start, perp);
+            float offsetB = Vector2.Dot(pointB - start, perp);
+
+            float segmentLength = Vector2.Distance(pointA, pointB);
+
+            accumulatedArea += (offsetA + offsetB) * 0.5f * segmentLength;
+            totalLength += segmentLength;
         }
 
-        float curveRatio = maxOffset / straightVector.magnitude;
+        if (totalLength < 1f)
+        {
+            return 0f;
+        }
+
+        float averageOffset = accumulatedArea / totalLength;
+        float curveRatio = averageOffset / straightVector.magnitude;
+
         return Mathf.Clamp(curveRatio / maxCurveRatio, -1f, 1f);
     }
 
@@ -268,268 +354,95 @@ public class SwipeShooter : MonoBehaviour
             return;
         }
 
-        // Base del tiro: la direccion real hacia el arco (en el plano
-        // horizontal), no un eje fijo del mundo. Asi el resultado no depende
-        // de como este rotada la camara ni de que el arco este alineado con
-        // el eje Z. El swipe solo desvia alrededor de esta linea:
-        // - dir2D.x (izq/der del swipe) -> desviacion lateral respecto al arco
-        // - dir2D.y (arriba/abajo) -> altura
-        // - magnitud -> potencia total
-        Vector3 toTarget = aimTarget != null
-            ? (aimTarget.position - ball.position)
-            : Vector3.forward;
-        toTarget.y = 0f; // la base de apuntado es horizontal, la altura la pone el swipe
+        // Direccion horizontal real desde la pelota al punto elegido con el
+        // tap. No depende de ejes fijos del mundo ni de como este rotada la
+        // camara: el punto ya es exacto, aca solo armamos una base
+        // izquierda/derecha para poder desplazarlo con la curva.
+        Vector3 flatToTarget = selectedAimPoint - ball.position;
+        flatToTarget.y = 0f;
 
-        if (toTarget.sqrMagnitude < 0.0001f)
+        if (flatToTarget.sqrMagnitude < 0.0001f)
         {
-            toTarget = Vector3.forward;
+            flatToTarget = Vector3.forward;
         }
 
-        Vector3 shotForward = toTarget.normalized;
+        Vector3 shotForward = flatToTarget.normalized;
         Vector3 shotRight = Vector3.Cross(Vector3.up, shotForward).normalized;
 
-        Vector2 dir2D = straightVector.normalized;
-        float power = straightVector.magnitude * forceMultiplier * powerMultiplier;
+        // Compensacion de curva: si el tiro va a curvar hacia un lado durante
+        // el vuelo, apuntamos primero un poco hacia el lado contrario del
+        // punto real, para que la curva lo termine trayendo justo ahi.
+        // Dibujar una "C" hace que la pelota arranque desviada y se doble
+        // hacia el punto que tocaste. Clampeado para que no se vaya de mambo
+        // con una curva exagerada.
+        float curveOffset = Mathf.Clamp(
+            curveAmount * curveCompensationDistance,
+            -curveCompensationDistance,
+            curveCompensationDistance);
 
-        Vector3 shootDirection =
-            shotForward * (power * forwardFactor) +
-            shotRight * (dir2D.x * power * horizontalFactor) +
-            Vector3.up * (Mathf.Max(dir2D.y, 0f) * power * verticalFactor);
+        Vector3 compensatedTarget = selectedAimPoint - shotRight * curveOffset;
 
-        ball.linearVelocity = Vector3.zero; // reset por si venia con velocidad previa
-        ball.AddForce(shootDirection, ForceMode.Impulse);
+        // Potencia del swipe (0 a 1) define que tan rapido/directo es el tiro
+        float swipeMagnitude01 = Mathf.Clamp01(straightVector.magnitude / maxSwipeReferenceDistance);
+        float baseFlightTime = Mathf.Lerp(maxFlightTime, minFlightTime, swipeMagnitude01);
+
+        // El multiplicador de la barra de jueguitos achica el tiempo de
+        // vuelo (tiro mas potente) sin perder precision, porque seguimos
+        // apuntando al mismo punto exacto.
+        float flightTime = Mathf.Max(0.2f, baseFlightTime / powerMultiplier);
+
+        Vector3 launchVelocity = CalculateLaunchVelocity(ball.position, compensatedTarget, flightTime);
+
+        ball.linearVelocity = launchVelocity;
 
         BallCurveEffect curveEffect = ball.GetComponent<BallCurveEffect>();
         if (curveEffect != null)
         {
-            // Pasamos shotForward (la linea base al arco) y no shootDirection
-            // completo, para que el eje de la curva sea siempre estable
-            // respecto al arco, sin importar cuanto desvio el swipe.
-            curveEffect.ApplyCurve(curveAmount, shotForward);
+            curveEffect.ApplyCurve(curveAmount, shotForward, flightTime);
         }
 
         shotFired = true;
 
-        Debug.Log($"Tiro disparado. Direccion: {shootDirection}, Curva: {curveAmount}, Multiplicador: {powerMultiplier}, Potencia swipe: {straightVector.magnitude}");
+        if (aimMarker != null)
+        {
+            aimMarker.SetActive(false);
+        }
+
+        Debug.Log($"Tiro disparado hacia {selectedAimPoint}. Velocidad: {launchVelocity}, Tiempo de vuelo: {flightTime:F2}s, Curva: {curveAmount:F2}");
     }
 
     /// <summary>
-    /// Análisis avanzado que captura la progresión completa de la curva dibujada
+    /// Resuelve analiticamente la velocidad inicial necesaria para que un
+    /// proyectil bajo gravedad, partiendo de "origin", llegue exactamente
+    /// a "target" en "flightTime" segundos.
     /// </summary>
-    private CurveData AnalyzeCurveAdvanced(List<Vector2> path, Vector2 start, Vector2 straightVector)
+    private Vector3 CalculateLaunchVelocity(Vector3 origin, Vector3 target, float flightTime)
     {
-        CurveData curveData = new CurveData();
+        Vector3 displacement = target - origin;
+        Vector3 displacementXZ = new Vector3(displacement.x, 0f, displacement.z);
 
-        // Fallback al método legacy si hay pocos puntos
-        if (path.Count < 3 || straightVector.magnitude < 1f)
-        {
-            curveData.intensity = 0f;
-            curveData.complexity = 0f;
-            curveData.progression = AnimationCurve.Constant(0f, 1f, 0f);
-            curveData.inflectionPoints = new Vector2[0];
-            curveData.totalCurveLength = straightVector.magnitude;
-            return curveData;
-        }
+        float gravity = Mathf.Abs(Physics.gravity.y);
 
-        // En lugar de usar solo perpendicular, vamos a analizar la desviación REAL del trazo
-        // respecto a la línea recta, considerando TODA la información 2D
-        
-        int sampleCount = Mathf.Min(curveSamplePoints, path.Count);
-        float[] curveProgressionX = new float[sampleCount]; // Desviación lateral real
-        float[] curveProgressionY = new float[sampleCount]; // Desviación vertical real
-        List<Vector2> inflectionPointsList = new List<Vector2>();
-        
-        float totalPathLength = 0f;
-        float maxAbsDeviationX = 0f;
-        float maxAbsDeviationY = 0f;
+        Vector3 velocityXZ = displacementXZ / flightTime;
+        float velocityY = (displacement.y + 0.5f * gravity * flightTime * flightTime) / flightTime;
 
-        // Calcular la longitud real del trazo
-        for (int i = 0; i < path.Count - 1; i++)
-        {
-            totalPathLength += Vector2.Distance(path[i], path[i + 1]);
-        }
-
-        // Analizar la desviación del trazo real respecto a la línea recta
-        for (int i = 0; i < sampleCount; i++)
-        {
-            float t = (float)i / (sampleCount - 1);
-            int pathIndex = Mathf.FloorToInt(t * (path.Count - 1));
-            pathIndex = Mathf.Clamp(pathIndex, 0, path.Count - 1);
-
-            Vector2 currentPoint = path[pathIndex];
-            
-            // Punto equivalente en la línea recta (interpolación lineal del inicio al final)
-            Vector2 straightPoint = Vector2.Lerp(start, start + straightVector, t);
-            
-            // Desviación real en ambos ejes
-            Vector2 deviation = currentPoint - straightPoint;
-            
-            // Normalizar por la longitud del trazo para que sea independiente del tamaño
-            curveProgressionX[i] = deviation.x / straightVector.magnitude;
-            curveProgressionY[i] = deviation.y / straightVector.magnitude;
-            
-            if (Mathf.Abs(deviation.x) > maxAbsDeviationX) maxAbsDeviationX = Mathf.Abs(deviation.x);
-            if (Mathf.Abs(deviation.y) > maxAbsDeviationY) maxAbsDeviationY = Mathf.Abs(deviation.y);
-
-            // Detectar puntos de inflexión en X
-            if (i > 0 && i < sampleCount - 1)
-            {
-                float prevX = curveProgressionX[i - 1];
-                float nextX = curveProgressionX[i + 1];
-                
-                if ((prevX < curveProgressionX[i] && nextX < curveProgressionX[i]) ||
-                    (prevX > curveProgressionX[i] && nextX > curveProgressionX[i]))
-                {
-                    inflectionPointsList.Add(currentPoint);
-                }
-            }
-        }
-
-        // Crear AnimationCurve que combine X e Y, priorizando la desviación más prominente
-        Keyframe[] keys = new Keyframe[sampleCount];
-        for (int i = 0; i < sampleCount; i++)
-        {
-            float time = (float)i / (sampleCount - 1);
-            
-            // Usar la desviación más prominente como valor principal
-            float combinedProgression = curveProgressionX[i];
-            if (maxAbsDeviationY > maxAbsDeviationX)
-            {
-                // Si la desviación vertical es más prominente, usarla pero escalada
-                combinedProgression = curveProgressionY[i] * 0.7f;
-            }
-            
-            keys[i] = new Keyframe(time, combinedProgression);
-        }
-
-        curveData.progression = new AnimationCurve(keys);
-        
-        // Suavizar la curva
-        for (int i = 0; i < keys.Length; i++)
-        {
-            curveData.progression.SmoothTangents(i, 0.5f);
-        }
-
-        // Métricas finales
-        float maxTotalDeviation = Mathf.Max(maxAbsDeviationX, maxAbsDeviationY);
-        curveData.intensity = Mathf.Clamp((maxTotalDeviation / straightVector.magnitude) / maxCurveRatio, -1f, 1f);
-        curveData.complexity = Mathf.Clamp01(inflectionPointsList.Count / 3f);
-        curveData.inflectionPoints = inflectionPointsList.ToArray();
-        curveData.totalCurveLength = totalPathLength;
-
-        // Guardar las desviaciones en X e Y para uso posterior (hack: usar campos no utilizados)
-        // Esto nos permitirá acceder a ambas componentes en CalculateAverageCurveDirection
-        
-        Debug.Log($"Análisis curva: MaxDevX={maxAbsDeviationX:F2}, MaxDevY={maxAbsDeviationY:F2}, Intensidad={curveData.intensity:F2}");
-
-        return curveData;
-    }
-
-    /// <summary>
-    /// Versión mejorada del disparo que usa los datos completos de la curva
-    /// </summary>
-    private void ShootAdvanced(Vector2 straightVector, CurveData curveData)
-    {
-        if (ball == null)
-        {
-            Debug.LogWarning("SwipeShooter: falta asignar el Rigidbody de la pelota.");
-            return;
-        }
-
-        // Misma lógica base que el método Shoot original
-        Vector3 toTarget = aimTarget != null
-            ? (aimTarget.position - ball.position)
-            : Vector3.forward;
-        toTarget.y = 0f;
-
-        if (toTarget.sqrMagnitude < 0.0001f)
-        {
-            toTarget = Vector3.forward;
-        }
-
-        Vector3 shotForward = toTarget.normalized;
-        Vector3 shotRight = Vector3.Cross(Vector3.up, shotForward).normalized;
-
-        Vector2 dir2D = straightVector.normalized;
-        float power = straightVector.magnitude * forceMultiplier * powerMultiplier;
-
-        Vector3 shootDirection =
-            shotForward * (power * forwardFactor) +
-            shotRight * (dir2D.x * power * horizontalFactor) +
-            Vector3.up * (Mathf.Max(dir2D.y, 0f) * power * verticalFactor);
-
-        ball.linearVelocity = Vector3.zero;
-        ball.AddForce(shootDirection, ForceMode.Impulse);
-
-        // Usar el sistema avanzado de curva
-        BallCurveEffect curveEffect = ball.GetComponent<BallCurveEffect>();
-        if (curveEffect != null)
-        {
-            // Calcular la dirección de curva promedio basada en la progresión real de la curva
-            Vector3 averageCurveDirection = CalculateAverageCurveDirection(curveData, shotRight);
-            curveEffect.ApplyCurveAdvanced(curveData, averageCurveDirection);
-        }
-
-        shotFired = true;
-
-        // Debug.Log($"Tiro avanzado disparado. Direccion: {shootDirection}, Curva: {curveData.intensity}, Complejidad: {curveData.complexity}, Inflexiones: {curveData.inflectionPoints.Length}");
-    }
-
-    /// <summary>
-    /// Calcula la dirección promedio de la curva basada en la progresión completa del trazo
-    /// </summary>
-    private Vector3 CalculateAverageCurveDirection(CurveData curveData, Vector3 shotRight)
-    {
-        if (curveData.progression == null || curveData.progression.length == 0)
-        {
-            Debug.Log("CalculateAverageCurveDirection: Sin progresión, usando shotRight básico");
-            return shotRight; // Fallback a curva lateral básica
-        }
-
-        // Samplear la curva en varios puntos para obtener la dirección promedio
-        int samples = 10;
-        Vector3 totalDirection = Vector3.zero;
-        
-        for (int i = 0; i < samples; i++)
-        {
-            float t = (float)i / (samples - 1);
-            float curveValue = curveData.progression.Evaluate(t);
-            
-            // Combinar componente lateral con componente vertical basado en el valor de la curva
-            Vector3 sampleDirection = shotRight * curveValue;
-            
-            // Si la curva es muy pronunciada, agregar componente vertical
-            if (Mathf.Abs(curveValue) > 0.3f)
-            {
-                sampleDirection += Vector3.up * (curveValue * 0.2f);
-            }
-            
-            totalDirection += sampleDirection;
-        }
-        
-        Vector3 result = totalDirection.normalized;
-        
-        // Si la dirección calculada es muy pequeña, usar una dirección por defecto
-        if (result.magnitude < 0.1f)
-        {
-            result = shotRight * Mathf.Sign(curveData.intensity);
-            Debug.Log($"CalculateAverageCurveDirection: Dirección muy pequeña, usando fallback: {result}");
-        }
-        else
-        {
-            Debug.Log($"CalculateAverageCurveDirection: Dirección calculada: {result}, Intensidad: {curveData.intensity}");
-        }
-        
-        return result;
+        return velocityXZ + Vector3.up * velocityY;
     }
 
     /// <summary>
     /// Llamar esto desde un boton de "Reintentar" para poder tirar de nuevo.
+    /// Vuelve a pedir un tap para elegir punto (no reusa el anterior).
     /// </summary>
     public void ResetShot()
     {
         shotFired = false;
         isDragging = false;
+        aimPointSelected = false;
+
+        if (aimMarker != null)
+        {
+            aimMarker.SetActive(false);
+        }
 
         if (trailRenderer != null)
         {

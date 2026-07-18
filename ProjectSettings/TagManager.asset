@@ -5,11 +5,14 @@ TagManager:
   serializedVersion: 3
   tags:
   - Ball
+  - Ground
+  - KickZone
+  - Goal
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Goal
   - Water
   - UI
   - 
