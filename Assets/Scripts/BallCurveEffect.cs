@@ -13,8 +13,8 @@ public class BallCurveEffect : MonoBehaviour
     [Tooltip("Cuanto dura el efecto de curva despues del disparo (segundos)")]
     [SerializeField] private float curveDuration = 0.8f;
 
-    [Tooltip("Multiplica la intensidad de la curva")]
-    [SerializeField] private float curveStrength = 1f;
+    [Tooltip("Multiplica la intensidad de la curva (aceleracion lateral en m/s^2, independiente de la masa de la pelota)")]
+    [SerializeField] private float curveStrength = 8f;
 
     [Tooltip("Si esta activo, la curva se va apagando con el tiempo en vez de ser constante")]
     [SerializeField] private bool fadeOverTime = true;
@@ -22,6 +22,7 @@ public class BallCurveEffect : MonoBehaviour
     private Rigidbody rb;
     private Vector3 curveDirection; // direccion lateral de la curva (en espacio local del tiro)
     private float curveAmount;      // -1 a 1, viene del swipe.x
+    private float activeDuration;   // duracion real usada para este tiro (puede venir sincronizada con el flightTime)
     private float timer;
     private bool isCurving;
 
@@ -31,25 +32,33 @@ public class BallCurveEffect : MonoBehaviour
     }
 
     /// <summary>
-    /// Activa el efecto de curva. Llamar justo despues de aplicarle el
-    /// impulso principal a la pelota en el momento del disparo.
+    /// Activa el efecto de curva. Llamar justo despues de fijar la
+    /// velocidad inicial de la pelota en el momento del disparo.
     /// </summary>
     /// <param name="normalizedCurveAmount">
     /// Valor entre -1 (curva a la izquierda) y 1 (curva a la derecha).
-    /// Normalmente viene de swipe.x normalizado.
     /// </param>
     /// <param name="shotForwardDirection">
     /// Direccion hacia adelante del tiro, para calcular la lateral perpendicular.
     /// </param>
-    public void ApplyCurve(float normalizedCurveAmount, Vector3 shotForwardDirection)
+    /// <param name="flightDuration">
+    /// Duracion esperada del vuelo (en segundos), para sincronizar exactamente
+    /// cuando termina la curva con cuando la pelota deberia llegar al arco. Si
+    /// no se pasa, se usa la duracion configurada en el Inspector (curveDuration).
+    /// </param>
+    public void ApplyCurve(float normalizedCurveAmount, Vector3 shotForwardDirection, float? flightDuration = null)
     {
         curveAmount = Mathf.Clamp(normalizedCurveAmount, -1f, 1f);
 
         // Lateral perpendicular a la direccion del tiro (en el plano horizontal)
         curveDirection = Vector3.Cross(Vector3.up, shotForwardDirection.normalized);
 
+        activeDuration = flightDuration.HasValue ? flightDuration.Value : curveDuration;
+
         timer = 0f;
         isCurving = curveAmount != 0f;
+
+        Debug.Log($"[Diagnostico curva] BallCurveEffect activado. Cantidad: {curveAmount:F2}, Direccion: {curveDirection}, Duracion: {activeDuration:F2}s, isCurving: {isCurving}");
     }
 
     private void FixedUpdate()
@@ -58,7 +67,7 @@ public class BallCurveEffect : MonoBehaviour
 
         timer += Time.fixedDeltaTime;
 
-        if (timer >= curveDuration)
+        if (timer >= activeDuration)
         {
             isCurving = false;
             return;
@@ -69,11 +78,11 @@ public class BallCurveEffect : MonoBehaviour
         if (fadeOverTime)
         {
             // La curva pega mas fuerte al principio del vuelo y se atenua
-            float fade = 1f - (timer / curveDuration);
+            float fade = 1f - (timer / activeDuration);
             intensity *= fade;
         }
 
-        rb.AddForce(curveDirection * intensity, ForceMode.Force);
+        rb.AddForce(curveDirection * intensity, ForceMode.Acceleration);
     }
 
     /// <summary>
