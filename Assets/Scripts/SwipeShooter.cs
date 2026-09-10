@@ -413,8 +413,13 @@ public class SwipeShooter : MonoBehaviour
             playerAnimator.SetTrigger("Shoot");
         }
 
-        // Reproducir sonido de patada
-        if (audioSource != null)
+        // Reproducir sonido de patada (por el bus central si existe, para que
+        // respete el volumen de SFX y el mute).
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySfx("SFX/Patada");
+        }
+        else if (audioSource != null)
         {
             AudioClip patadaClip = Resources.Load<AudioClip>("SFX/Patada");
             if (patadaClip != null)
@@ -432,6 +437,12 @@ public class SwipeShooter : MonoBehaviour
         if (aimMarker != null)
         {
             aimMarker.SetActive(false);
+        }
+
+        // Avisar al flujo para que empiece a vigilar si el tiro entra o se erra.
+        if (GameFlowManager.Instance != null)
+        {
+            GameFlowManager.Instance.NotifyShotTaken(ball);
         }
 
         Debug.Log($"Tiro disparado hacia {selectedAimPoint}. Velocidad: {launchVelocity}, Tiempo de vuelo: {flightTime:F2}s, Curva: {curveAmount:F2}");

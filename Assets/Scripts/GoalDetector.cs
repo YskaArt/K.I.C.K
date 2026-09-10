@@ -34,12 +34,17 @@ public class GoalDetector : MonoBehaviour
 
         alreadyScored = true;
 
+        // Cancela la vigilancia de "tiro errado" del GameFlowManager: entro.
+        if (GameFlowManager.Instance != null)
+        {
+            GameFlowManager.Instance.NotifyGoalResolved();
+        }
+
         // El multiplicador de los jueguitos se suma aca cuando este listo
         // ese sistema; por ahora el puntaje final es el valor base de la zona.
         int finalScore = pointValue;
         manager.AddPoints(finalScore);
         manager.GameOver();
-       
     }
 
     /// <summary>

@@ -10,6 +10,10 @@ public class SceneLoader : MonoBehaviour
     }
     public void RestartLevel()
     {
+        // Restaurar el tiempo por si venimos de un Game Over o slow-motion.
+        Time.timeScale = 1f;
+        Time.fixedDeltaTime = 0.02f;
+
         Scene escenaActual = SceneManager.GetActiveScene();
         SceneManager.LoadScene(escenaActual.buildIndex);
     }

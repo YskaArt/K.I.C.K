@@ -1,4 +1,6 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// Orquesta el flujo completo de una ronda:
@@ -22,11 +24,35 @@ public class GameFlowManager : MonoBehaviour
     [Header("Puntaje")]
     [SerializeField] private GameManager gameManager;
 
+    [Header("Deteccion de tiro errado")]
+    [Tooltip("Segundos maximos que se espera un gol despues del disparo. Si no entra, cuenta como fallo.")]
+    [SerializeField] private float missTimeoutSeconds = 4f;
+
+    [Tooltip("Ventana corta (segundos) para permitir un pique que entre despues de que la pelota toca el piso.")]
+    [SerializeField] private float groundSettleSeconds = 1.2f;
+
+    [Tooltip("Velocidad (u/s) por debajo de la cual se considera que la pelota se detuvo.")]
+    [SerializeField] private float restSpeed = 0.4f;
+
+    [Tooltip("Cuanto tiempo tiene que estar detenida la pelota para dar el tiro por resuelto.")]
+    [SerializeField] private float restDuration = 0.4f;
+
+    [Tooltip("Se dispara cuando la pelota NO entra al arco (tiro errado).")]
+    public UnityEvent onShotMissed;
+
     public GamePhase CurrentPhase { get; private set; } = GamePhase.Jueguitos;
 
     // Multiplicador "congelado" en el momento de apretar el boton de patear,
     // para que el calculo de puntaje y de fuerza usen siempre el mismo valor.
     private float frozenMultiplier = 1f;
+
+    // Vigilancia del resultado del tiro (gol vs. fallo).
+    private Coroutine shotWatch;
+    private bool shotResolved;
+    // Recien despues de que el jugador patea de verdad se puede declarar fallo.
+    // Mientras apunta/hace el swipe la pelota puede tocar el piso sin que eso
+    // cuente como tiro errado.
+    private bool shotTaken;
 
     private void Awake()
     {
@@ -47,6 +73,10 @@ public class GameFlowManager : MonoBehaviour
     private void EnterJueguitosPhase()
     {
         CurrentPhase = GamePhase.Jueguitos;
+
+        StopShotWatch();
+        shotResolved = false;
+        shotTaken = false;
 
         if (kickZone != null) kickZone.enabled = true;
         if (swipeShooter != null) swipeShooter.enabled = false;
@@ -96,6 +126,7 @@ public class GameFlowManager : MonoBehaviour
         if (CurrentPhase != GamePhase.Aiming) return;
 
         CurrentPhase = GamePhase.Resolved;
+        NotifyGoalResolved();
 
         int finalScore = Mathf.RoundToInt(baseScore * frozenMultiplier);
 
@@ -105,6 +136,116 @@ public class GameFlowManager : MonoBehaviour
         }
 
         Debug.Log($"Gol resuelto. Base: {baseScore} x Multiplicador: {frozenMultiplier} = {finalScore}");
+    }
+
+    // ---------------------------------------------------------------
+    // Resultado del tiro: gol o fallo
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Lo llama SwipeShooter justo despues de patear. Arranca la vigilancia
+    /// que va a detectar si el tiro entra al arco o se erra.
+    /// </summary>
+    public void NotifyShotTaken(Rigidbody ballBody)
+    {
+        if (CurrentPhase != GamePhase.Aiming) return;
+
+        shotTaken = true;
+        shotResolved = false;
+        StopShotWatch();
+        shotWatch = StartCoroutine(WatchShotOutcome(ballBody));
+    }
+
+    /// <summary>
+    /// Lo llama GoalDetector cuando la pelota entra a una zona de gol.
+    /// Cancela la vigilancia para que no se cuente como fallo.
+    /// </summary>
+    public void NotifyGoalResolved()
+    {
+        shotResolved = true;
+        StopShotWatch();
+    }
+
+    /// <summary>
+    /// Lo llama Ground cuando la pelota toca el piso ya en fase de disparo.
+    /// Le da una ventana corta a un posible pique que entre; si no, es fallo.
+    /// </summary>
+    public void NotifyBallHitGround()
+    {
+        // Solo cuenta si el jugador YA pateo. Antes del disparo (mientras
+        // apunta y hace el swipe) la pelota puede caer al piso sin penalidad.
+        if (!shotTaken || shotResolved || CurrentPhase != GamePhase.Aiming) return;
+
+        StopShotWatch();
+        shotWatch = StartCoroutine(MissAfter(groundSettleSeconds));
+    }
+
+    private IEnumerator WatchShotOutcome(Rigidbody ballBody)
+    {
+        float elapsed = 0f;
+        float restTimer = 0f;
+
+        while (elapsed < missTimeoutSeconds)
+        {
+            if (shotResolved) yield break;
+
+            elapsed += Time.unscaledDeltaTime;
+
+            if (ballBody != null &&
+                ballBody.linearVelocity.sqrMagnitude < restSpeed * restSpeed)
+            {
+                restTimer += Time.unscaledDeltaTime;
+                if (restTimer >= restDuration) break; // la pelota se detuvo sin entrar
+            }
+            else
+            {
+                restTimer = 0f;
+            }
+
+            yield return null;
+        }
+
+        ResolveMiss();
+    }
+
+    private IEnumerator MissAfter(float seconds)
+    {
+        float t = 0f;
+        while (t < seconds)
+        {
+            if (shotResolved) yield break;
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        ResolveMiss();
+    }
+
+    private void ResolveMiss()
+    {
+        if (!shotTaken || shotResolved || CurrentPhase != GamePhase.Aiming) return;
+
+        shotResolved = true;
+        shotWatch = null;
+        CurrentPhase = GamePhase.Resolved;
+
+        Debug.Log("Tiro errado: la pelota no entro al arco.");
+
+        onShotMissed?.Invoke();
+
+        if (gameManager != null)
+        {
+            gameManager.GameOver();
+        }
+    }
+
+    private void StopShotWatch()
+    {
+        if (shotWatch != null)
+        {
+            StopCoroutine(shotWatch);
+            shotWatch = null;
+        }
     }
 
     /// <summary>

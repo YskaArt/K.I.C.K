@@ -20,5 +20,12 @@ public class Ground : MonoBehaviour
         {
             gameManager.GameOver();
         }
+        else if (GameFlowManager.Instance != null)
+        {
+            // Ya estamos en fase de disparo: la pelota tocando el piso sin
+            // haber entrado al arco es un tiro errado (con una ventana corta
+            // por si pica y entra).
+            GameFlowManager.Instance.NotifyBallHitGround();
+        }
     }
 }

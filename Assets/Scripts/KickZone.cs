@@ -31,8 +31,13 @@ public class KickZone : MonoBehaviour
                 playerAnimator.SetTrigger("Kick");
             }
 
-            // Reproducir sonido de jueguito
-            if (audioSource != null)
+            // Reproducir sonido de jueguito (por el bus central si existe, para
+            // que respete el volumen de SFX y el mute).
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySfx("SFX/jueguito");
+            }
+            else if (audioSource != null)
             {
                 AudioClip jueguitoClip = Resources.Load<AudioClip>("SFX/jueguito");
                 if (jueguitoClip != null)

@@ -7,6 +7,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI finalScoreText;
     [SerializeField] private GameObject gameOverPanel;
 
+    [Tooltip("Opcional: muestra el puesto conseguido en la tabla de puntajes (ej: \"Puesto #2\").")]
+    [SerializeField] private TextMeshProUGUI rankText;
+
     private int score = 0;
     private bool gameActive = true;
 
@@ -47,10 +50,22 @@ public class GameManager : MonoBehaviour
 
         if (score > PlayerPrefs.GetInt(HighScoreKey, 0))
             PlayerPrefs.SetInt(HighScoreKey, score);
+
+        // Registrar en la tabla de mejores puntajes (top 10).
+        int rank = Scoreboard.Submit(score);
+        if (rankText != null)
+        {
+            rankText.text = rank > 0 ? $"Puesto #{rank}" : string.Empty;
+        }
     }
 
     public void RestartGame()
     {
+        // GameOver y el slow-motion dejan el tiempo alterado; hay que
+        // restaurarlo antes de recargar o la escena nueva arranca congelada.
+        Time.timeScale = 1f;
+        Time.fixedDeltaTime = 0.02f;
+
         UnityEngine.SceneManagement.SceneManager.LoadScene(
             UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
