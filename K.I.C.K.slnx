@@ -1,12 +1,11 @@
 ﻿<Solution>
   <Project Path="Unity.AI.Sound.csproj" />
   <Project Path="Unity.Timeline.csproj" />
+  <Project Path="Unity.InputSystem.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.csproj" />
   <Project Path="Unity.AppUI.csproj" />
   <Project Path="Unity.AI.Toolkit.Asset.csproj" />
-  <Project Path="Unity.Mathematics.csproj" />
   <Project Path="Unity.Timeline.Editor.csproj" />
-  <Project Path="Unity.Collections.csproj" />
   <Project Path="Unity.InferenceEngine.Microsoft.Msagl.csproj" />
   <Project Path="Unity.VisualScripting.Core.Editor.csproj" />
   <Project Path="Unity.AI.Assistant.Runtime.csproj" />
@@ -14,13 +13,12 @@
   <Project Path="Unity.AI.Assistant.UI.Editor.csproj" />
   <Project Path="Unity.AI.Toolkit.Utility.csproj" />
   <Project Path="Unity.AppUI.Redux.csproj" />
-  <Project Path="Unity.AI.MCP.Editor.csproj" />
   <Project Path="Unity.Burst.csproj" />
   <Project Path="Unity.AI.Generators.Redux.csproj" />
+  <Project Path="Unity.AI.MCP.Editor.csproj" />
   <Project Path="Unity.InferenceEngine.Editor.Visualizer.csproj" />
   <Project Path="Unity.VisualScripting.Flow.Editor.csproj" />
   <Project Path="Unity.VisualStudio.Editor.csproj" />
-  <Project Path="Unity.InputSystem.csproj" />
   <Project Path="Unity.InferenceEngine.csproj" />
   <Project Path="Unity.AI.Mesh.csproj" />
   <Project Path="Unity.AI.Assistant.Editor.csproj" />
@@ -38,9 +36,11 @@
   <Project Path="Unity.PerformanceTesting.csproj" />
   <Project Path="Unity.AI.ModelSelector.csproj" />
   <Project Path="Unity.AI.Animate.csproj" />
+  <Project Path="Unity.InputSystem.ForUI.csproj" />
   <Project Path="Unity.AI.Assistant.Tools.Editor.csproj" />
   <Project Path="Unity.AppUI.Navigation.Editor.csproj" />
   <Project Path="Unity.Burst.Editor.csproj" />
+  <Project Path="Unity.AppUI.InternalAPIBridge.csproj" />
   <Project Path="Unity.AI.Image.csproj" />
   <Project Path="Unity.AI.Generators.UI.csproj" />
   <Project Path="Unity.Rider.Editor.csproj" />
@@ -52,6 +52,7 @@
   <Project Path="Unity.AI.Search.Editor.csproj" />
   <Project Path="Unity.AI.Assistant.Agent.Dynamic.Extension.Editor.csproj" />
   <Project Path="Unity.AI.Tracing.csproj" />
+  <Project Path="Unity.PlasticSCM.Editor.Assistant.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.AI.Navigation.Editor.csproj" />
   <Project Path="Unity.AppUI.MVVM.csproj" />
@@ -59,12 +60,9 @@
   <Project Path="Unity.AI.Assistant.API.Editor.csproj" />
   <Project Path="Unity.AI.Generators.UI.AIDropdownIntegrations.csproj" />
   <Project Path="Unity.AppUI.Navigation.csproj" />
-  <Project Path="Unity.InputSystem.ForUI.csproj" />
   <Project Path="Unity.AI.Generators.Asset.csproj" />
   <Project Path="Unity.AI.Navigation.csproj" />
-  <Project Path="Unity.Collections.CodeGen.csproj" />
   <Project Path="Unity.AI.Assistant.AssetGenerators.Editor.csproj" />
-  <Project Path="Unity.Mathematics.Editor.csproj" />
   <Project Path="Unity.VisualScripting.SettingsProvider.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.AI.Assistant.Annotations.Editor.csproj" />
@@ -76,6 +74,7 @@
   <Project Path="Unity.AppUI.Redux.Editor.csproj" />
   <Project Path="Unity.AI.Pbr.Srp.csproj" />
   <Project Path="Unity.AppUI.Undo.csproj" />
+  <Project Path="Unity.InputSystem.ForUI.Editor.csproj" />
   <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="Unity.AI.Toolkit.Async.csproj" />
   <Project Path="Unity.AI.Assistant.Bridge.Editor.csproj" />
@@ -83,7 +82,6 @@
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.AI.Toolkit.GenerationContextMenu.csproj" />
   <Project Path="Unity.InferenceEngine.MacBLAS.csproj" />
-  <Project Path="Unity.AppUI.InternalAPIBridge.csproj" />
   <Project Path="Unity.InferenceEngine.ONNX.Editor.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
   <Project Path="Unity.InferenceEngine.iOSBLAS.csproj" />
@@ -91,5 +89,4 @@
   <Project Path="Unity.AI.Generators.Contexts.csproj" />
   <Project Path="Unity.AI.Generators.IO.Srp.csproj" />
   <Project Path="Unity.AI.Animate.Motion.Runtime.csproj" />
-  <Project Path="Unity.Collections.Editor.csproj" />
 </Solution>

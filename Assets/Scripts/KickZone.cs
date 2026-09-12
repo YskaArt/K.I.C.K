@@ -52,6 +52,19 @@ public class KickZone : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Se ejecuta cuando GameFlowManager desactiva este script (kickZone.enabled
+    /// = false) al pasar a la fase de disparo. Sin esto, el indicador se queda
+    /// "pegado" con el ultimo estado que tenia (por ejemplo, encendido si justo
+    /// se apreto el boton de patear estando parado en la zona de jueguitos),
+    /// porque al dejar de correr Update() nadie lo vuelve a apagar.
+    /// </summary>
+    private void OnDisable()
+    {
+        if (kickIndicator != null)
+            kickIndicator.SetActive(false);
+    }
+
     private bool DetectTap()
     {
 #if UNITY_EDITOR

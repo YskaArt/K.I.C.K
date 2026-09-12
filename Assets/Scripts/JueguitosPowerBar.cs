@@ -25,6 +25,36 @@ public class JueguitosPowerBar : MonoBehaviour
     [Tooltip("Imagen con Fill Amount que representa el progreso. Alternativa opcional al Slider.")]
     [SerializeField] private Image uiFillImage;
 
+    [Header("Color segun progreso")]
+    [Tooltip("Si esta activo, el color de la barra cambia segun el progreso usando el gradiente de abajo")]
+    [SerializeField] private bool useColorGradient = true;
+
+    [Tooltip("Color en 0% -> color en 100%. Por defecto: verde -> amarillo -> rojo, como una barra de vida al reves")]
+    [SerializeField]
+    private Gradient colorGradient = CreateDefaultGradient();
+
+    private static Gradient CreateDefaultGradient()
+    {
+        // Verde (vacia) -> Amarillo (a mitad) -> Rojo (llena). Es la barra de
+        // vida clasica, pero acá se usa "invertida": llenarse de rojo es bueno
+        // (mas potencia), no malo.
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(new Color(0.2f, 0.85f, 0.25f), 0f),   // verde
+                new GradientColorKey(new Color(1f, 0.85f, 0.1f), 0.5f),    // amarillo
+                new GradientColorKey(new Color(0.9f, 0.15f, 0.15f), 1f),   // rojo
+            },
+            new[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(1f, 1f),
+            }
+        );
+        return gradient;
+    }
+
     private float currentPower;
 
     /// <summary>Progreso actual de la barra, de 0 a 1.</summary>
@@ -75,6 +105,28 @@ public class JueguitosPowerBar : MonoBehaviour
         if (uiFillImage != null)
         {
             uiFillImage.fillAmount = currentPower;
+        }
+
+        if (useColorGradient)
+        {
+            Color color = colorGradient.Evaluate(currentPower);
+
+            if (uiFillImage != null)
+            {
+                uiFillImage.color = color;
+            }
+
+            // El Slider de Unity tiene su propia imagen de relleno (Fill Rect),
+            // separada del fillAmount de una Image comun. La coloreamos tambien
+            // si esta asignado un Slider en vez de (o ademas de) la Image.
+            if (uiSlider != null && uiSlider.fillRect != null)
+            {
+                Image sliderFillImage = uiSlider.fillRect.GetComponent<Image>();
+                if (sliderFillImage != null)
+                {
+                    sliderFillImage.color = color;
+                }
+            }
         }
     }
 }
