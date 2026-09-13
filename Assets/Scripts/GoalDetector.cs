@@ -44,7 +44,17 @@ public class GoalDetector : MonoBehaviour
         // ese sistema; por ahora el puntaje final es el valor base de la zona.
         int finalScore = pointValue;
         manager.AddPoints(finalScore);
-        manager.GameOver();
+
+        // En vez de cortar la partida de una, el jugador elige si sigue
+        // jugando (el puntaje sigue sumando en cada loop) o termina aca.
+        if (GameFlowManager.Instance != null)
+        {
+            GameFlowManager.Instance.PresentGoalFollowUp();
+        }
+        else
+        {
+            manager.GameOver();
+        }
     }
 
     /// <summary>

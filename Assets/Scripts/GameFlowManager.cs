@@ -24,6 +24,26 @@ public class GameFlowManager : MonoBehaviour
     [Header("Puntaje")]
     [SerializeField] private GameManager gameManager;
 
+    [Header("Loop: seguir jugando o terminar")]
+    [Tooltip("Rigidbody/controlador de la pelota, para devolverla a su posicion inicial si el jugador sigue jugando.")]
+    [SerializeField] private BallController ball;
+
+    [Tooltip("Se dispara justo despues de convertir un gol, para mostrar el panel de '¿Seguir jugando?'. Conectalo a SetActive(true) del panel.")]
+    public UnityEvent onGoalFollowUp;
+
+    [Tooltip("Escena a cargar cuando el jugador elige terminar y volver al menu principal.")]
+    [SerializeField] private string mainMenuSceneName = "MainMenu";
+
+    [Header("Loop: tiempo de gracia al continuar")]
+    [Tooltip("Segundos que el tiempo queda congelado al volver a la fase de Jueguitos despues de elegir 'Seguir jugando', para poder ubicarse antes de que la pelota se mueva.")]
+    [SerializeField] private float juggleGraceSeconds = 2f;
+
+    [Tooltip("Cuanto se reduce ese tiempo de gracia en cada loop siguiente (dificulta la partida a medida que se sigue jugando).")]
+    [SerializeField] private float graceDecreasePerLoop = 0.3f;
+
+    [Tooltip("Piso minimo del tiempo de gracia: nunca baja de este valor.")]
+    [SerializeField] private float minGraceSeconds = 0.4f;
+
     [Header("Deteccion de tiro errado")]
     [Tooltip("Segundos maximos que se espera un gol despues del disparo. Si no entra, cuenta como fallo.")]
     [SerializeField] private float missTimeoutSeconds = 4f;
@@ -54,6 +74,15 @@ public class GameFlowManager : MonoBehaviour
     // cuente como tiro errado.
     private bool shotTaken;
 
+    // Tiempo de gracia restante para el proximo loop (va bajando de a poco).
+    private float currentGraceSeconds;
+    private Coroutine graceRoutine;
+    // Mientras esta activo, tocar el piso en fase Jueguitos NO cuenta como
+    // fallo. Es la red de seguridad real: aunque el freeze de Time.timeScale
+    // falle o quede un colision en cola, un toque de piso durante la gracia
+    // nunca termina la partida.
+    private bool graceActive;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -63,6 +92,7 @@ public class GameFlowManager : MonoBehaviour
         }
 
         Instance = this;
+        currentGraceSeconds = juggleGraceSeconds;
     }
 
     private void Start()
@@ -77,6 +107,13 @@ public class GameFlowManager : MonoBehaviour
         StopShotWatch();
         shotResolved = false;
         shotTaken = false;
+
+        if (graceRoutine != null)
+        {
+            StopCoroutine(graceRoutine);
+            graceRoutine = null;
+        }
+        graceActive = false;
 
         if (kickZone != null) kickZone.enabled = true;
         if (swipeShooter != null) swipeShooter.enabled = false;
@@ -136,6 +173,117 @@ public class GameFlowManager : MonoBehaviour
         }
 
         Debug.Log($"Gol resuelto. Base: {baseScore} x Multiplicador: {frozenMultiplier} = {finalScore}");
+    }
+
+    // ---------------------------------------------------------------
+    // Loop: seguir jugando o terminar tras un gol
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Lo llama GoalDetector justo despues de sumar los puntos del gol.
+    /// En vez de cortar la partida de una, pausa el juego y deja la decision
+    /// en manos del jugador: seguir jugando (loop, el puntaje sigue sumando)
+    /// o terminar aca con el puntaje actual.
+    /// </summary>
+    public void PresentGoalFollowUp()
+    {
+        if (CurrentPhase != GamePhase.Aiming) return;
+
+        CurrentPhase = GamePhase.Resolved;
+
+        if (swipeShooter != null) swipeShooter.enabled = false;
+
+        // Pausamos como en un Game Over: la pelota y la camara quedan
+        // congeladas mientras el jugador decide.
+        Time.timeScale = 0f;
+
+        onGoalFollowUp?.Invoke();
+    }
+
+    /// <summary>
+    /// Conectar al boton "Seguir jugando" del panel post-gol. Reinicia la
+    /// pelota y las zonas de gol, y vuelve a la fase de Jueguitos SIN tocar
+    /// el puntaje acumulado (sigue sumando en el proximo loop).
+    /// </summary>
+    public void ContinuePlaying()
+    {
+        if (CurrentPhase != GamePhase.Resolved) return;
+
+        Time.timeScale = 1f;
+        Time.fixedDeltaTime = 0.02f;
+
+        if (swipeShooter != null) swipeShooter.ResetShot();
+        if (ball != null) ball.ResetToStart();
+
+        foreach (GoalDetector zone in FindObjectsByType<GoalDetector>(
+            FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            zone.ResetZone();
+        }
+
+        EnterJueguitosPhase();
+        StartGraceWindow();
+
+        // El proximo loop tiene un poco menos de tiempo de gracia (nunca por
+        // debajo del piso configurado).
+        currentGraceSeconds = Mathf.Max(minGraceSeconds, currentGraceSeconds - graceDecreasePerLoop);
+    }
+
+    /// <summary>
+    /// Congela el tiempo por 'currentGraceSeconds' (segundos reales) para que
+    /// el jugador pueda ubicarse antes de que la pelota empiece a caer/moverse.
+    /// La KickZone queda activa todo el tiempo (se puede tocar apenas se
+    /// pueda) y, ademas, mientras dure la gracia un toque de piso NO cuenta
+    /// como fallo: es la red de seguridad para que nunca se pierda la
+    /// partida por esto.
+    /// </summary>
+    private void StartGraceWindow()
+    {
+        if (graceRoutine != null)
+        {
+            StopCoroutine(graceRoutine);
+            graceRoutine = null;
+        }
+
+        graceActive = currentGraceSeconds > 0f;
+        if (!graceActive) return;
+
+        Time.timeScale = 0f;
+        graceRoutine = StartCoroutine(EndGraceAfter(currentGraceSeconds));
+    }
+
+    private IEnumerator EndGraceAfter(float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+
+        graceRoutine = null;
+        graceActive = false;
+
+        if (CurrentPhase == GamePhase.Jueguitos)
+        {
+            Time.timeScale = 1f;
+        }
+    }
+
+    /// <summary>
+    /// Conectar al boton "Menu principal" del panel post-gol. Guarda el
+    /// puntaje acumulado hasta este momento (high score + tabla de puntajes,
+    /// via GameManager.GameOver) y vuelve directo al menu principal, igual
+    /// que el boton "Menu Principal" del panel de Game Over normal.
+    /// </summary>
+    public void EndRun()
+    {
+        if (CurrentPhase != GamePhase.Resolved) return;
+
+        if (gameManager != null)
+        {
+            gameManager.GameOver();
+        }
+
+        Time.timeScale = 1f;
+        Time.fixedDeltaTime = 0.02f;
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene(mainMenuSceneName);
     }
 
     // ---------------------------------------------------------------
@@ -251,10 +399,11 @@ public class GameFlowManager : MonoBehaviour
     /// <summary>
     /// Consulta de Ground.cs: si seguimos en Jueguitos, tocar el piso es un
     /// fallo (Game Over). Si ya se paso a Aiming/Resolved, la pelota cayendo
-    /// es parte normal del tiro y no debe cortar la partida.
+    /// es parte normal del tiro y no debe cortar la partida. Durante la
+    /// ventana de gracia al reanudar un loop tampoco cuenta como fallo.
     /// </summary>
     public bool ShouldEndOnGroundHit()
     {
-        return CurrentPhase == GamePhase.Jueguitos;
+        return CurrentPhase == GamePhase.Jueguitos && !graceActive;
     }
 }

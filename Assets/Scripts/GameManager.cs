@@ -13,6 +13,9 @@ public class GameManager : MonoBehaviour
     private int score = 0;
     private bool gameActive = true;
 
+    /// <summary>False una vez que termino la partida (Game Over ya ejecutado).</summary>
+    public bool IsGameActive => gameActive;
+
     private const string HighScoreKey = "HighScore";
 
     private void Start()

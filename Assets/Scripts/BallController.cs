@@ -7,9 +7,26 @@ public class BallController : MonoBehaviour
     private Rigidbody rb;
     public bool IsInKickZone { get; private set; }
 
+    private Vector3 startPosition;
+    private Quaternion startRotation;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        startPosition = transform.position;
+        startRotation = transform.rotation;
+    }
+
+    /// <summary>
+    /// Vuelve la pelota a su posicion inicial de la escena y le saca toda la
+    /// velocidad. Lo usa GameFlowManager al reiniciar el loop de jueguitos
+    /// despues de un gol.
+    /// </summary>
+    public void ResetToStart()
+    {
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        transform.SetPositionAndRotation(startPosition, startRotation);
     }
 
     public void Kick()
