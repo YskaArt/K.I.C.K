@@ -100,6 +100,24 @@ public class GameFlowManager : MonoBehaviour
         EnterJueguitosPhase();
     }
 
+    private void Update()
+    {
+        if (CurrentPhase != GamePhase.Jueguitos) return;
+
+        // PC: Enter = patear (igual que el boton "Patear", solo si la barra llego al umbral).
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            OnShootButtonPressed();
+            return;
+        }
+
+        // Barra llena (todos los jueguitos hechos) -> pasa solo a la fase de disparo.
+        if (powerBar != null && powerBar.Power01 >= 1f)
+        {
+            OnShootButtonPressed();
+        }
+    }
+
     private void EnterJueguitosPhase()
     {
         CurrentPhase = GamePhase.Jueguitos;

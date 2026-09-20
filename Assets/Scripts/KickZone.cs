@@ -73,6 +73,10 @@ public class KickZone : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
             return true;
 
+        // PC: barra espaciadora = jueguito.
+        if (Input.GetKeyDown(KeyCode.Space))
+            return true;
+
         if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
             return true;
 

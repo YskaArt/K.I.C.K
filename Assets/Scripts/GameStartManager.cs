@@ -21,7 +21,7 @@ public class GameStartManager : MonoBehaviour
             return;
 
         // Mouse (Editor/PC)
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
         {
             StartGame();
             return;
