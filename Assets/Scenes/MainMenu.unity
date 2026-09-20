@@ -163,6 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a44cc8a73c79bb249af8ee6830b067e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
+  gameSceneName: Jueguitos
 --- !u!1 &99437921
 GameObject:
   m_ObjectHideFlags: 0
@@ -1635,6 +1636,13 @@ MonoBehaviour:
   dragThreshold: 0.18
   loopSlides: 0
   allowArrowKeys: 1
+  prevButton: {fileID: 0}
+  nextButton: {fileID: 0}
+  autoCreateArrows: 1
+  arrowSize: {x: 90, y: 90}
+  arrowColor: {r: 0, g: 0, b: 0, a: 0.55}
+  startButton: {fileID: 0}
+  startButtonText: "\xA1JUGAR!"
 --- !u!114 &910227392
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1803,7 +1811,7 @@ MonoBehaviour:
   m_text: Volver
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 07ecab181fb14f24e853aaac8d3afbdc, type: 2}
-  m_sharedMaterial: {fileID: 7903410573310194625, guid: 7b1a82eb8dca85f4f83f72ecdf11484c, type: 2}
+  m_sharedMaterial: {fileID: -6724660644844463970, guid: 07ecab181fb14f24e853aaac8d3afbdc, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1869,7 +1877,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &995759750
@@ -4626,6 +4634,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 65fdcede4f839c2469740a29486e3f68, type: 3}
       propertyPath: m_Name
       value: Football_Field
+      objectReference: {fileID: 0}
+    - target: {fileID: 2303480242577709337, guid: 65fdcede4f839c2469740a29486e3f68, type: 3}
+      propertyPath: m_Lightmapping
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3215356464507611883, guid: 65fdcede4f839c2469740a29486e3f68, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'

@@ -4,8 +4,21 @@ using UnityEngine.SceneManagement;
 public class SceneLoader : MonoBehaviour
 {
     // Cargar una escena por nombre
+    [Tooltip("Escena de juego: si es la primera vez y no se vio el tutorial, se muestra antes de cargarla.")]
+    [SerializeField] private string gameSceneName = "Jueguitos";
+
     public void LoadScene(string sceneName)
     {
+        if (sceneName == gameSceneName && !TutorialProgress.Completed)
+        {
+            var tutorial = FindAnyObjectByType<TutorialScreen>(FindObjectsInactive.Include);
+            if (tutorial != null)
+            {
+                tutorial.OpenMandatory(() => SceneManager.LoadScene(sceneName));
+                return;
+            }
+        }
+
         SceneManager.LoadScene(sceneName);
     }
     public void RestartLevel()

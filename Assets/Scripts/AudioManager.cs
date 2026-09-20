@@ -140,7 +140,7 @@ public class AudioManager : MonoBehaviour
 
         if (autoCollectSceneSources && listsEmpty)
         {
-            foreach (var src in FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var src in FindObjectsByType<AudioSource>(FindObjectsInactive.Include))
             {
                 bool isMusic = src.loop || src.playOnAwake;
                 Register(src, isMusic);

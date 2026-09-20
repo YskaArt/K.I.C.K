@@ -4462,8 +4462,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.4115958, y: 1.9408252, z: 1.5908105}
-  m_Center: {x: -0.7057979, y: 0.39037034, z: 0.29540527}
+  m_Size: {x: 3.3763692, y: 2.4224043, z: 1.5908105}
+  m_Center: {x: -1.1881846, y: 0.6311599, z: 0.29540527}
 --- !u!114 &1034093236
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7596,6 +7596,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a44cc8a73c79bb249af8ee6830b067e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
+  gameSceneName: Jueguitos
 --- !u!1 &1867305690
 GameObject:
   m_ObjectHideFlags: 0
@@ -7793,8 +7794,8 @@ Transform:
   m_GameObject: {fileID: 1916484268}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.13820076, y: 3.13, z: -35.1}
-  m_LocalScale: {x: 19.372593, y: 8, z: 0.5}
+  m_LocalPosition: {x: -0.13820076, y: 3.5969, z: -35.1}
+  m_LocalScale: {x: 19.372593, y: 8.9336, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1384169970}
@@ -7819,8 +7820,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.013355118, y: 1, z: 7.9308014}
-  m_Center: {x: -0.500553, y: 0, z: 3.4654007}
+  m_Size: {x: 0.011494053, y: 1, z: 13.892784}
+  m_Center: {x: -0.5569907, y: 0, z: 6.446392}
 --- !u!65 &1916484274
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -7840,8 +7841,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.009536796, y: 1, z: 8.45816}
-  m_Center: {x: 0.5085224, y: 0, z: 3.7290802}
+  m_Size: {x: 0.03009673, y: 1, z: 13.650383}
+  m_Center: {x: 0.5566892, y: 0, z: 6.3251915}
 --- !u!114 &1916484275
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7880,8 +7881,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 1.1243747, y: 0.9685056, z: 1}
+  m_Center: {x: -0.0032104051, y: -0.015745644, z: 0}
 --- !u!1 &1919006686
 GameObject:
   m_ObjectHideFlags: 0

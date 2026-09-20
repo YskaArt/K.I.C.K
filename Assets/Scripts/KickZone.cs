@@ -67,10 +67,11 @@ public class KickZone : MonoBehaviour
 
     private bool DetectTap()
     {
-#if UNITY_EDITOR
+        // Mouse en cualquier plataforma (editor, build de PC, WebGL/itch.io).
+        // En celular el toque tambien genera un click simulado, pero como se
+        // devuelve un unico bool, un mismo tap nunca cuenta doble.
         if (Input.GetMouseButtonDown(0))
             return true;
-#endif
 
         if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
             return true;

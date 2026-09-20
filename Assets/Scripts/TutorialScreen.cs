@@ -60,6 +60,26 @@ public class TutorialScreen : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     [SerializeField] private bool loopSlides = false;
     [SerializeField] private bool allowArrowKeys = true;
 
+    [Header("Flechas anterior / siguiente")]
+    [Tooltip("Boton propio de 'anterior'. Si queda vacio y 'Auto Create Arrows' esta activo, se crea uno solo.")]
+    [SerializeField] private Button prevButton;
+
+    [Tooltip("Boton propio de 'siguiente'. Si queda vacio y 'Auto Create Arrows' esta activo, se crea uno solo.")]
+    [SerializeField] private Button nextButton;
+
+    [Tooltip("Crea flechas < > sobre los bordes del viewport cuando no asignas botones propios.")]
+    [SerializeField] private bool autoCreateArrows = true;
+    [SerializeField] private Vector2 arrowSize = new Vector2(90f, 90f);
+    [SerializeField] private Color arrowColor = new Color(0f, 0f, 0f, 0.55f);
+
+    [Header("Modo obligatorio (primera vez)")]
+    [Tooltip("Boton 'Jugar' que aparece en la ultima captura cuando el tutorial es obligatorio. Si queda vacio se crea uno solo.")]
+    [SerializeField] private Button startButton;
+    [SerializeField] private string startButtonText = "¡JUGAR!";
+
+    private bool mandatory;
+    private System.Action onMandatoryFinished;
+
     private readonly List<GameObject> spawnedDots = new List<GameObject>();
     private int currentIndex;
     private float dragStartX;
@@ -71,7 +91,19 @@ public class TutorialScreen : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     private void OnEnable()
     {
         BuildSlides();
+
+        if (prevButton != null) prevButton.onClick.AddListener(Prev);
+        if (nextButton != null) nextButton.onClick.AddListener(Next);
+        if (startButton != null) startButton.onClick.AddListener(OnStartPressed);
+
         GoTo(0, animated: false);
+    }
+
+    private void OnDisable()
+    {
+        if (prevButton != null) prevButton.onClick.RemoveListener(Prev);
+        if (nextButton != null) nextButton.onClick.RemoveListener(Next);
+        if (startButton != null) startButton.onClick.RemoveListener(OnStartPressed);
     }
 
     private void Update()
@@ -83,10 +115,61 @@ public class TutorialScreen : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     }
 
     /// <summary>Muestra la pantalla (conectar al OnClick del boton "Como Jugar").</summary>
-    public void Open() => gameObject.SetActive(true);
+    public void Open()
+    {
+        for (Transform t = transform; t != null; t = t.parent)
+        {
+            if (t.GetComponent<Canvas>() != null) break;
+            t.gameObject.SetActive(true);
+        }
+    }
 
     /// <summary>Oculta la pantalla (conectar al OnClick del boton "Volver").</summary>
-    public void Close() => gameObject.SetActive(false);
+    public void Close()
+    {
+        // En modo obligatorio no se puede cerrar hasta haber visto todo.
+        if (mandatory && !TutorialProgress.Completed) return;
+
+        mandatory = false;
+        onMandatoryFinished = null;
+
+        // Apagar el panel raiz (hijo directo del Canvas), no solo el Viewport.
+        Transform root = transform;
+        while (root.parent != null && root.parent.GetComponent<Canvas>() == null)
+        {
+            root = root.parent;
+        }
+        root.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Abre el tutorial como paso obligatorio: no se puede cerrar hasta llegar
+    /// a la ultima captura, y ahi aparece el boton "Jugar" que ejecuta
+    /// 'onFinished' (por ej. cargar la escena del juego).
+    /// </summary>
+    public void OpenMandatory(System.Action onFinished)
+    {
+        mandatory = true;
+        onMandatoryFinished = onFinished;
+
+        // Este componente vive en el Viewport, hijo de "TutorialPanel" (que
+        // arranca desactivado): hay que prender tambien los padres.
+        for (Transform t = transform; t != null; t = t.parent)
+        {
+            if (t.GetComponent<Canvas>() != null) break;
+            t.gameObject.SetActive(true);
+        }
+
+        GoTo(0, animated: false);
+    }
+
+    private void OnStartPressed()
+    {
+        System.Action callback = onMandatoryFinished;
+        mandatory = false;
+        onMandatoryFinished = null;
+        callback?.Invoke();
+    }
 
     /// <summary>Conectar al boton "Siguiente".</summary>
     public void Next() => GoTo(currentIndex + 1, animated: true);
@@ -126,6 +209,114 @@ public class TutorialScreen : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         slidesContainer.sizeDelta = new Vector2(width * slides.Length, slidesContainer.sizeDelta.y);
 
         BuildDots();
+        EnsureArrows();
+    }
+
+    private void EnsureArrows()
+    {
+        if (!autoCreateArrows) return;
+
+        // Se crean como hijos del viewport (despues del SlidesContainer) para
+        // que se dibujen encima de las capturas y no las recorte la Mask.
+        if (prevButton == null) prevButton = CreateArrow("PrevArrow", "<", left: true);
+        if (nextButton == null) nextButton = CreateArrow("NextArrow", ">", left: false);
+
+        if (startButton == null)
+        {
+            startButton = CreateStartButton();
+            startButton.onClick.AddListener(OnStartPressed);
+        }
+    }
+
+    private Button CreateStartButton()
+    {
+        var go = new GameObject("StartButton", typeof(RectTransform), typeof(Image), typeof(Button));
+        var rt = (RectTransform)go.transform;
+        // Va FUERA del viewport (hermano, justo debajo) para no tapar la ultima
+        // captura ni quedar recortado por la Mask.
+        rt.SetParent(viewport.parent, false);
+        rt.anchorMin = viewport.anchorMin;
+        rt.anchorMax = viewport.anchorMax;
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(420f, 110f);
+
+        float bottomY = viewport.anchoredPosition.y - viewport.rect.height * viewport.pivot.y;
+        float centerX = viewport.anchoredPosition.x + viewport.rect.width * (0.5f - viewport.pivot.x);
+        rt.anchoredPosition = new Vector2(centerX, bottomY - 20f);
+
+        var bg = go.GetComponent<Image>();
+        bg.color = new Color(0.15f, 0.7f, 0.25f, 0.95f);
+        go.GetComponent<Button>().targetGraphic = bg;
+
+        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        var labelRt = (RectTransform)labelGo.transform;
+        labelRt.SetParent(rt, false);
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = Vector2.zero;
+        labelRt.offsetMax = Vector2.zero;
+
+        var label = labelGo.GetComponent<TextMeshProUGUI>();
+        label.text = startButtonText;
+        label.alignment = TextAlignmentOptions.Center;
+        label.fontSize = 56f;
+        label.color = Color.white;
+        label.raycastTarget = false;
+
+        return go.GetComponent<Button>();
+    }
+
+    private Button CreateArrow(string objectName, string glyph, bool left)
+    {
+        var go = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(viewport, false);
+
+        float x = left ? 0f : 1f;
+        rt.anchorMin = new Vector2(x, 0.5f);
+        rt.anchorMax = new Vector2(x, 0.5f);
+        rt.pivot = new Vector2(x, 0.5f);
+        rt.sizeDelta = arrowSize;
+        rt.anchoredPosition = Vector2.zero;
+
+        var bg = go.GetComponent<Image>();
+        bg.color = arrowColor;
+
+        var button = go.GetComponent<Button>();
+        button.targetGraphic = bg;
+
+        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        var labelRt = (RectTransform)labelGo.transform;
+        labelRt.SetParent(rt, false);
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = Vector2.zero;
+        labelRt.offsetMax = Vector2.zero;
+
+        var label = labelGo.GetComponent<TextMeshProUGUI>();
+        label.text = glyph;
+        label.alignment = TextAlignmentOptions.Center;
+        label.fontSize = 64f;
+        label.color = Color.white;
+        label.raycastTarget = false;
+
+        return button;
+    }
+
+    private void UpdateArrows()
+    {
+        if (slides == null) return;
+
+        bool canPrev = loopSlides || currentIndex > 0;
+        bool canNext = loopSlides || currentIndex < slides.Length - 1;
+
+        if (prevButton != null) prevButton.interactable = canPrev;
+        if (nextButton != null) nextButton.interactable = canNext;
+
+        bool onLast = currentIndex == slides.Length - 1;
+        if (onLast) TutorialProgress.Completed = true;
+
+        if (startButton != null) startButton.gameObject.SetActive(mandatory && onLast);
     }
 
     private void BuildDots()
@@ -182,6 +373,7 @@ public class TutorialScreen : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
 
         UpdateDots();
         UpdatePageLabel();
+        UpdateArrows();
     }
 
     private IEnumerator SlideTo(float targetX)

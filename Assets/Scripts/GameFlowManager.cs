@@ -215,8 +215,7 @@ public class GameFlowManager : MonoBehaviour
         if (swipeShooter != null) swipeShooter.ResetShot();
         if (ball != null) ball.ResetToStart();
 
-        foreach (GoalDetector zone in FindObjectsByType<GoalDetector>(
-            FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (GoalDetector zone in FindObjectsByType<GoalDetector>(FindObjectsInactive.Include))
         {
             zone.ResetZone();
         }
