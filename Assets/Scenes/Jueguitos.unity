@@ -519,6 +519,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ground
   gameManager: {fileID: 176211687}
+  dropEffect: {fileID: 0}
 --- !u!64 &99437923
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1551,6 +1552,7 @@ MonoBehaviour:
   groundSettleSeconds: 1.2
   restSpeed: 0.4
   restDuration: 0.4
+  missEffect: {fileID: 0}
   onShotMissed:
     m_PersistentCalls:
       m_Calls: []
@@ -7863,6 +7865,7 @@ MonoBehaviour:
   onGoalScored:
     m_PersistentCalls:
       m_Calls: []
+  goalEffect: {fileID: 11400000, guid: 7d8986c42a8e91e4e9bc8b56c3d0d523, type: 2}
   manager: {fileID: 176211687}
 --- !u!65 &1916484276
 BoxCollider:

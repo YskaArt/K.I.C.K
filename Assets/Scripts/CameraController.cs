@@ -28,6 +28,7 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float transitionDuration = 0.5f;
 
     private Coroutine currentTransition;
+    private Coroutine currentShake;
 
     private void Awake()
     {
@@ -104,5 +105,40 @@ public class CameraController : MonoBehaviour
         }
 
         camTransform.SetPositionAndRotation(target.position, target.rotation);
+    }
+
+    /// <summary>
+    /// Sacude la camara un instante (gol, fallo). Usa tiempo real, asi que
+    /// se ve aunque en ese momento el juego este congelado (Time.timeScale
+    /// = 0, como pasa justo al convertir un gol o perder).
+    /// </summary>
+    public void Shake(float duration = 0.15f, float magnitude = 0.25f)
+    {
+        if (targetCamera == null) return;
+
+        if (currentShake != null)
+        {
+            StopCoroutine(currentShake);
+        }
+
+        currentShake = StartCoroutine(ShakeRoutine(duration, magnitude));
+    }
+
+    private IEnumerator ShakeRoutine(float duration, float magnitude)
+    {
+        Transform camTransform = targetCamera.transform;
+        Vector3 anchor = camTransform.position;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float damper = 1f - Mathf.Clamp01(elapsed / duration);
+            camTransform.position = anchor + Random.insideUnitSphere * magnitude * damper;
+            yield return null;
+        }
+
+        camTransform.position = anchor;
+        currentShake = null;
     }
 }

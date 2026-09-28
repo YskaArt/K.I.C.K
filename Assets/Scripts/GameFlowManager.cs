@@ -57,6 +57,9 @@ public class GameFlowManager : MonoBehaviour
     [Tooltip("Cuanto tiempo tiene que estar detenida la pelota para dar el tiro por resuelto.")]
     [SerializeField] private float restDuration = 0.4f;
 
+    [Tooltip("Particulas cuando el tiro se erra (no entro al arco). Crealo con Assets > Create > K.I.C.K > Impact Effect.")]
+    [SerializeField] private ImpactEffect missEffect;
+
     [Tooltip("Se dispara cuando la pelota NO entra al arco (tiro errado).")]
     public UnityEvent onShotMissed;
 
@@ -210,6 +213,18 @@ public class GameFlowManager : MonoBehaviour
         CurrentPhase = GamePhase.Resolved;
 
         if (swipeShooter != null) swipeShooter.enabled = false;
+
+        StartCoroutine(FreezeAndShowGoalFollowUp());
+    }
+
+    /// <summary>
+    /// Le da un instante (tiempo real) antes de congelar y mostrar el panel,
+    /// para que el screen shake del gol se alcance a ver contra la escena en
+    /// movimiento en vez de quedar tapado por el freeze/panel del mismo frame.
+    /// </summary>
+    private IEnumerator FreezeAndShowGoalFollowUp()
+    {
+        yield return new WaitForSecondsRealtime(0.12f);
 
         // Pausamos como en un Game Over: la pelota y la camara quedan
         // congeladas mientras el jugador decide.
@@ -396,7 +411,29 @@ public class GameFlowManager : MonoBehaviour
 
         Debug.Log("Tiro errado: la pelota no entro al arco.");
 
+        if (CameraController.Instance != null)
+        {
+            CameraController.Instance.Shake(0.2f, 0.4f);
+        }
+        Handheld.Vibrate();
+
+        if (missEffect != null && ball != null)
+        {
+            ImpactEffectPlayer.Ensure().Play(missEffect, ball.transform.position);
+        }
+
         onShotMissed?.Invoke();
+
+        StartCoroutine(DelayedGameOver());
+    }
+
+    /// <summary>
+    /// Mismo motivo que FreezeAndShowGoalFollowUp: darle al screen shake un
+    /// instante antes de que el freeze del Game Over lo tape.
+    /// </summary>
+    private IEnumerator DelayedGameOver()
+    {
+        yield return new WaitForSecondsRealtime(0.12f);
 
         if (gameManager != null)
         {

@@ -24,6 +24,10 @@ public class GoalDetector : MonoBehaviour
     [Tooltip("Se dispara cuando esta zona detecta el gol. Pasa el puntaje base de la zona.")]
     public UnityEvent<int> onGoalScored;
 
+    [Header("Efectos")]
+    [Tooltip("Particulas que se reproducen en la pelota al convertir. Crealo con Assets > Create > K.I.C.K > Impact Effect.")]
+    [SerializeField] private ImpactEffect goalEffect;
+
     private bool alreadyScored;
     public GameManager manager;
     private void OnTriggerEnter(Collider other)
@@ -33,6 +37,19 @@ public class GoalDetector : MonoBehaviour
         if (!other.CompareTag(ballTag)) return;
 
         alreadyScored = true;
+
+        // Feedback inmediato de impacto: sacudida de camara + vibracion (en
+        // celular; en editor/PC Handheld.Vibrate() no hace nada).
+        if (CameraController.Instance != null)
+        {
+            CameraController.Instance.Shake(0.25f, 0.6f);
+        }
+        Handheld.Vibrate();
+
+        if (goalEffect != null)
+        {
+            ImpactEffectPlayer.Ensure().Play(goalEffect, other.transform.position);
+        }
 
         // Cancela la vigilancia de "tiro errado" del GameFlowManager: entro.
         if (GameFlowManager.Instance != null)

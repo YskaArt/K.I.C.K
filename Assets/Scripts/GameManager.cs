@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using TMPro;
 
@@ -11,6 +12,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rankText;
 
     private int score = 0;
+    private int displayedScore = 0;
+    private Coroutine scoreAnimRoutine;
     private bool gameActive = true;
 
     /// <summary>False una vez que termino la partida (Game Over ya ejecutado).</summary>
@@ -40,7 +43,9 @@ public class GameManager : MonoBehaviour
     {
         if (!gameActive) return;
         score += amount;
-        UpdateScoreUI();
+
+        if (scoreAnimRoutine != null) StopCoroutine(scoreAnimRoutine);
+        scoreAnimRoutine = StartCoroutine(AnimateScoreTo(score));
     }
 
     public void GameOver()
@@ -75,6 +80,31 @@ public class GameManager : MonoBehaviour
 
     private void UpdateScoreUI()
     {
-        scoreText.text = score.ToString();
+        displayedScore = score;
+        scoreText.text = displayedScore.ToString();
+    }
+
+    /// <summary>
+    /// Hace que el numero de puntaje "cuente" hasta el valor nuevo en vez de
+    /// saltar de golpe. Usa tiempo real para que se siga viendo aunque el
+    /// gol congele el juego un instante (ver GameFlowManager.PresentGoalFollowUp).
+    /// </summary>
+    private IEnumerator AnimateScoreTo(int target)
+    {
+        int start = displayedScore;
+        float duration = Mathf.Clamp(Mathf.Abs(target - start) * 0.03f, 0.15f, 0.6f);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            displayedScore = Mathf.RoundToInt(Mathf.Lerp(start, target, Mathf.Clamp01(elapsed / duration)));
+            scoreText.text = displayedScore.ToString();
+            yield return null;
+        }
+
+        displayedScore = target;
+        scoreText.text = displayedScore.ToString();
+        scoreAnimRoutine = null;
     }
 }

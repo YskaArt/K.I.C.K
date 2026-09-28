@@ -1,8 +1,12 @@
+using System.Collections;
 using UnityEngine;
 
 public class Ground : MonoBehaviour
 {
     [SerializeField] private GameManager gameManager;
+
+    [Tooltip("Particulas de polvo/impacto cuando se te cae la pelota. Crealo con Assets > Create > K.I.C.K > Impact Effect.")]
+    [SerializeField] private ImpactEffect dropEffect;
 
     private void OnCollisionEnter(Collision other)
     {
@@ -18,7 +22,20 @@ public class Ground : MonoBehaviour
 
         if (stillJuggling)
         {
-            gameManager.GameOver();
+            if (CameraController.Instance != null)
+            {
+                CameraController.Instance.Shake(0.2f, 0.4f);
+            }
+            Handheld.Vibrate();
+
+            if (dropEffect != null)
+            {
+                ImpactEffectPlayer.Ensure().Play(dropEffect, other.transform.position);
+            }
+
+            // Retraso corto (tiempo real) para que el shake se alcance a ver
+            // antes de que el freeze del Game Over tape la pantalla.
+            StartCoroutine(DelayedGameOver());
         }
         else if (GameFlowManager.Instance != null)
         {
@@ -27,5 +44,11 @@ public class Ground : MonoBehaviour
             // por si pica y entra).
             GameFlowManager.Instance.NotifyBallHitGround();
         }
+    }
+
+    private IEnumerator DelayedGameOver()
+    {
+        yield return new WaitForSecondsRealtime(0.12f);
+        gameManager.GameOver();
     }
 }
