@@ -30,6 +30,16 @@ public class DroneKeeper : MonoBehaviour
     private Vector3 direction;
     private Bounds bounds;
 
+    /// <summary>
+    /// Velocidad actual del dron. La usa GameFlowManager para subir la
+    /// dificultad en cada loop de "seguir jugando".
+    /// </summary>
+    public float Speed
+    {
+        get => speed;
+        set => speed = Mathf.Max(0f, value);
+    }
+
     private void Start()
     {
         if (moveArea == null)

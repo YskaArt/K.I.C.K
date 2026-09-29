@@ -44,12 +44,25 @@ public class GameFlowManager : MonoBehaviour
     [Tooltip("Piso minimo del tiempo de gracia: nunca baja de este valor.")]
     [SerializeField] private float minGraceSeconds = 0.4f;
 
+    [Header("Loop: dificultad progresiva")]
+    [Tooltip("Dron/obstaculo cuya velocidad sube en cada loop. Opcional: si queda vacio, no hace nada.")]
+    [SerializeField] private DroneKeeper droneKeeper;
+
+    [Tooltip("Cuanto aumenta la velocidad del dron en cada loop siguiente.")]
+    [SerializeField] private float droneSpeedIncreasePerLoop = 0.6f;
+
+    [Tooltip("Velocidad maxima a la que puede llegar el dron, para que la partida siga siendo jugable.")]
+    [SerializeField] private float droneMaxSpeed = 8f;
+
     [Header("Deteccion de tiro errado")]
     [Tooltip("Segundos maximos que se espera un gol despues del disparo. Si no entra, cuenta como fallo.")]
     [SerializeField] private float missTimeoutSeconds = 4f;
 
     [Tooltip("Ventana corta (segundos) para permitir un pique que entre despues de que la pelota toca el piso.")]
     [SerializeField] private float groundSettleSeconds = 1.2f;
+
+    [Tooltip("Ventana corta (segundos) para permitir que, despues de chocar un ShotBlocker (dron, arquero), el rebote siga y entre igual al arco.")]
+    [SerializeField] private float blockSettleSeconds = 0.5f;
 
     [Tooltip("Velocidad (u/s) por debajo de la cual se considera que la pelota se detuvo.")]
     [SerializeField] private float restSpeed = 0.4f;
@@ -259,6 +272,13 @@ public class GameFlowManager : MonoBehaviour
         // El proximo loop tiene un poco menos de tiempo de gracia (nunca por
         // debajo del piso configurado).
         currentGraceSeconds = Mathf.Max(minGraceSeconds, currentGraceSeconds - graceDecreasePerLoop);
+
+        // ...y el dron (si hay uno asignado) se mueve un poco mas rapido,
+        // hasta el tope configurado.
+        if (droneKeeper != null)
+        {
+            droneKeeper.Speed = Mathf.Min(droneKeeper.Speed + droneSpeedIncreasePerLoop, droneMaxSpeed);
+        }
     }
 
     /// <summary>
@@ -358,6 +378,28 @@ public class GameFlowManager : MonoBehaviour
 
         StopShotWatch();
         shotWatch = StartCoroutine(MissAfter(groundSettleSeconds));
+    }
+
+    /// <summary>
+    /// Lo llama un ShotBlocker (dron, y a futuro un arquero) cuando la
+    /// pelota lo choca en pleno vuelo. No corta el tiro de una: le da una
+    /// ventana corta por si el rebote sigue y entra igual al arco (ahi
+    /// GoalDetector cancela esto con NotifyGoalResolved). Si no entra en
+    /// ese tiempo, recien ahi se resuelve como fallo.
+    /// </summary>
+    public void NotifyShotBlocked()
+    {
+        if (!shotTaken || shotResolved || CurrentPhase != GamePhase.Aiming) return;
+
+        // Golpe de camara chico, inmediato, solo como feedback del impacto
+        // -- el resultado (gol o fallo) todavia no esta definido.
+        if (CameraController.Instance != null)
+        {
+            CameraController.Instance.Shake(0.08f, 0.15f);
+        }
+
+        StopShotWatch();
+        shotWatch = StartCoroutine(MissAfter(blockSettleSeconds));
     }
 
     private IEnumerator WatchShotOutcome(Rigidbody ballBody)

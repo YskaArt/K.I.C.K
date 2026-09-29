@@ -14,6 +14,15 @@ public class KickZone : MonoBehaviour
 
     private void Update()
     {
+        // La partida ya termino (Game Over): no seguir cargando la barra ni
+        // el indicador, aunque este script siga activo un instante mas
+        // (por el retraso del shake) o la pelota vuelva a pisar la zona.
+        if (gameManager != null && !gameManager.IsGameActive)
+        {
+            if (kickIndicator != null) kickIndicator.SetActive(false);
+            return;
+        }
+
         if (kickIndicator != null)
             kickIndicator.SetActive(ball.IsInKickZone);
 

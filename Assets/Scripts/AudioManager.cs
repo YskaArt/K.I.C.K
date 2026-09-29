@@ -222,10 +222,17 @@ public class AudioManager : MonoBehaviour
         Apply();
     }
 
-    /// <summary>Reproduce un SFX ya escalado por SFX x Master (respeta el mute).</summary>
+    [Header("Variacion de SFX")]
+    [Tooltip("Cuanto varia el pitch al azar en cada SFX (0.08 = entre -8% y +8%), para que un sonido repetido (jueguito, patada) no suene siempre identico.")]
+    [Range(0f, 0.5f)]
+    [SerializeField] private float sfxPitchVariation = 0.08f;
+
+    /// <summary>Reproduce un SFX ya escalado por SFX x Master (respeta el mute), con un pitch levemente al azar.</summary>
     public void PlaySfx(AudioClip clip, float volumeScale = 1f)
     {
         if (clip == null || sfxPlayer == null) return;
+
+        sfxPlayer.pitch = 1f + UnityEngine.Random.Range(-sfxPitchVariation, sfxPitchVariation);
         sfxPlayer.PlayOneShot(clip, Mathf.Clamp01(volumeScale));
     }
 
