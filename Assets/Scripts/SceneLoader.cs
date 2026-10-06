@@ -3,23 +3,24 @@ using UnityEngine.SceneManagement;
 
 public class SceneLoader : MonoBehaviour
 {
-    // Cargar una escena por nombre
-    [Tooltip("Escena de juego: si es la primera vez y no se vio el tutorial, se muestra antes de cargarla.")]
+    [Tooltip("Nombre de la escena de juego. La usa LoadTutorial() para saber que escena cargar.")]
     [SerializeField] private string gameSceneName = "Jueguitos";
 
+    // Cargar una escena por nombre
     public void LoadScene(string sceneName)
     {
-        if (sceneName == gameSceneName && !TutorialProgress.Completed)
-        {
-            var tutorial = FindAnyObjectByType<TutorialScreen>(FindObjectsInactive.Include);
-            if (tutorial != null)
-            {
-                tutorial.OpenMandatory(() => SceneManager.LoadScene(sceneName));
-                return;
-            }
-        }
-
         SceneManager.LoadScene(sceneName);
+    }
+
+    /// <summary>
+    /// Conectar al boton "Como Jugar" del menu. Fuerza la ronda guiada (ver
+    /// GuidedTutorial) aunque ya se haya jugado antes -- a diferencia de
+    /// Play, que solo la activa la primera vez (TutorialProgress.Completed).
+    /// </summary>
+    public void LoadTutorial()
+    {
+        GuidedTutorialRequest.RequestNext();
+        SceneManager.LoadScene(gameSceneName);
     }
     public void RestartLevel()
     {

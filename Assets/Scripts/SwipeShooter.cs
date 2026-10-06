@@ -77,6 +77,18 @@ public class SwipeShooter : MonoBehaviour
     private bool aimPointSelected;
     private Vector3 selectedAimPoint;
 
+    /// <summary>True desde que se elige el punto del arco (paso 1) hasta que se dispara. Lo usa GuidedTutorial para saber cuando mostrar el hint del swipe.</summary>
+    public bool AimPointSelected => aimPointSelected;
+
+    /// <summary>
+    /// Si esta en true, ignora todo input (tap y swipe) sin tocar nada del
+    /// estado ya elegido (punto del arco, marker). Para bloquear el input
+    /// durante una pausa (ej: GuidedTutorial) usar esto en vez de
+    /// 'enabled = false': desactivar el componente dispara OnEnable() al
+    /// reactivarlo, que resetea aimPointSelected y oculta el aimMarker.
+    /// </summary>
+    public bool InputLocked { get; set; }
+
     private Vector2 startPos;
     private bool isDragging;
     private bool shotFired;
@@ -122,6 +134,8 @@ public class SwipeShooter : MonoBehaviour
 
     private void Update()
     {
+        if (InputLocked) return;
+
         if (!aimPointSelected)
         {
             HandleAimTapInput();
