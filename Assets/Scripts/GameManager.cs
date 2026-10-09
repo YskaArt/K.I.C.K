@@ -59,6 +59,9 @@ public class GameManager : MonoBehaviour
         if (score > PlayerPrefs.GetInt(HighScoreKey, 0))
             PlayerPrefs.SetInt(HighScoreKey, score);
 
+        // Acumular en la billetera persistente (se gasta en la tienda de skins).
+        PlayerWallet.Add(score);
+
         // Registrar en la tabla de mejores puntajes (top 10).
         int rank = Scoreboard.Submit(score);
         if (rankText != null)

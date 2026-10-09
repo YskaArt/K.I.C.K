@@ -19,6 +19,10 @@ public class RobotSkin : ScriptableObject
     [Tooltip("Icono que se muestra en el boton de la pantalla de seleccion (opcional)")]
     public Sprite previewIcon;
 
+    [Header("Tienda")]
+    [Tooltip("Costo en puntos acumulados (PlayerWallet) para desbloquear esta skin. 0 = gratis, disponible desde el principio.")]
+    [Min(0)] public int price = 0;
+
     [Header("Aspecto del robot")]
     [Tooltip("Textura que se aplica al cuerpo del robot (_BaseMap). Dejala vacia si solo querés cambiar el color o usar un material completo.")]
     public Texture2D bodyTexture;
